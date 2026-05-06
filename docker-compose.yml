@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Serviço de Produção (Simula como o app rodará no servidor)
+  app-prod:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: acai-erp-saas:latest
+    container_name: acai-erp-prod
+    ports:
+      - "8080:80"
+    restart: always
+
+  # Serviço de Desenvolvimento (Com Hot-Reload e volumes)
+  app-dev:
+    image: node:20-alpine
+    container_name: acai-erp-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "9999:9999"
+    environment:
+      - NODE_ENV=development
+    # O comando --host é necessário para que o Vite aceite conexões de fora do container
+    command: npm run dev -- --host 0.0.0.0
