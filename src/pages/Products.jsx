@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Minus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, AlertTriangle, Tag, Eye, EyeOff, Package, Truck, FileText, Layout, Layers, Globe, Image as ImageIcon, Video, ShoppingBag, DollarSign, ClipboardList, BarChart2, Hash, Box, Link as LinkIcon, Info, Settings, ShieldCheck, Zap, Share2, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, AlertTriangle, Tag, Eye, EyeOff, Package, Truck, FileText, Layout, Layers, Globe, Image as ImageIcon, Video, ShoppingBag, DollarSign, ClipboardList, BarChart2, Hash, Box, Link as LinkIcon, Info, Settings, ShieldCheck, Zap, Share2, ChevronRight, AlignLeft, AlignCenter, AlignRight, Activity, Paperclip, History, PlusCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import toast from 'react-hot-toast';
 import ProductBox3D from '../components/products/ProductBox3D';
@@ -17,26 +17,40 @@ function fmt(v) { return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFracti
 
 const EMPTY_PRODUCT = { 
   name: '', category: 'acai', brand: '', condition: 'new', unit: 'pote', 
-  identityType: 'emoji', // 'emoji' ou 'image'
-  emoji: '🍇', description: '', active: true, 
+  identityType: 'emoji',
+  emoji: '🍇', description: '', active: true,
+  // Tipo do produto
+  productType: 'simples', itemTypeSped: '00', productLine: '', guarantee: '',
+  allowInSales: 'sim',
   // Financial
   price: '', promotionalPrice: '', cost: '', averageCost: '', markup: '', 
-  priceLists: [], // { name, price }
+  priceLists: [],
   // Stock
   stock: '', minStock: '5', maxStock: '', stockNotification: true, stockLocation: '', preparationDays: '1',
+  controlStock: 'sim', underOrder: 'nao', controlLots: 'nao',
   // IDs & Fiscal
   sku: '', ean: '', eanTributavel: '', ncm: '', cest: '', origin: '0',
-  ipiCode: '', ipiFixed: '', extipi: '',
+  ipiCode: '', ipiFixed: '', ipiLegalCode: '', extipi: '',
+  tributaryUnit: '', conversionFactor: '',
   icms_sit_trib: '102', icms_origem: '0',
   pis_sit_trib: '07', cofins_sit_trib: '07',
   // Logistics
-  weight: '', weightNet: '', packagingType: 'pacote', width: '', height: '', length: '', itemsPerBox: '1',
+  weight: '', weightNet: '', packagingType: 'pacote', packaging: '',
+  width: '', height: '', length: '', itemsPerBox: '1',
   // SEO & Marketing
   videoLink: '', slug: '', keywords: '', seoTitle: '', seoDescription: '', richDescription: '',
   // Arrays & Objects
   tags: [], attributes: [], images: [],
   mappings: {}, variations: [], suppliers: [], internalNotes: '',
-  ads: [] // { channel, id, status }
+  ads: [],
+  // FASE 2: Enterprise Fields
+  components: [], // Composição/Kit (BOM)
+  nutritional: { portion: '', calories: '', carbs: '', sugars: '', proteins: '', fats: '', fiber: '', sodium: '' },
+  batches: [], // Lotes e Validade
+  relatedProducts: [], // Cross-sell / Compre Junto
+  attachments: [], // Anexos e Laudos
+  historyLogs: [], // Auditoria
+  pis_perc: '', cofins_perc: '', cfop_int: '', cfop_ext: ''
 };
 
 // ─── Emoji Picker Data ───────────────────────────────────────────────────────
@@ -420,7 +434,7 @@ export default function Products() {
                     )}
                   </div>
 
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-primary transition-all" onClick={() => openEdit(p)}>
                       <Edit2 size={12} />
                     </button>
@@ -571,15 +585,21 @@ export default function Products() {
 
             <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
               {/* Header Tabs - Sticky and responsive */}
-              <div className="sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-2xl px-4 md:px-8 py-4 border-b border-white/5 overflow-x-auto no-scrollbar flex items-center gap-3">
+              <div className="sticky top-0 z-40 bg-[#0f1115]/95 backdrop-blur-3xl px-4 md:px-8 py-4 border-b border-white/5 flex flex-wrap items-center gap-2 max-h-[30vh] overflow-y-auto custom-scrollbar">
                 {[
                   { id: 'geral', label: 'Geral', icon: <Layout size={14} /> },
+                  { id: 'composicao', label: 'Composição', icon: <Layers size={14} /> },
                   { id: 'precos', label: 'Preços', icon: <DollarSign size={14} /> },
-                  { id: 'estoque', label: 'Estoque', icon: <Layers size={14} /> },
+                  { id: 'estoque', label: 'Estoque', icon: <Package size={14} /> },
                   { id: 'logistica', label: 'Logística', icon: <Truck size={14} /> },
+                  { id: 'nutricional', label: 'Nutricional', icon: <Activity size={14} /> },
                   { id: 'fiscal', label: 'Fiscal', icon: <FileText size={14} /> },
+                  { id: 'ficha', label: 'Ficha Técnica', icon: <ClipboardList size={14} /> },
                   { id: 'marketing', label: 'Marketing', icon: <Globe size={14} /> },
-                  { id: 'canais', label: 'Canais', icon: <ShoppingBag size={14} /> },
+                  { id: 'canais', label: 'Canais', icon: <LinkIcon size={14} /> },
+                  { id: 'anexos', label: 'Anexos', icon: <Paperclip size={14} /> },
+                  { id: 'outros', label: 'Outros', icon: <Settings size={14} /> },
+                  { id: 'historico', label: 'Histórico', icon: <History size={14} /> },
                 ].map(t => (
                   <button 
                     key={t.id} 
@@ -601,45 +621,139 @@ export default function Products() {
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                       {/* Identidade Visual */}
                       <div className="md:col-span-4 space-y-4">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-widest block">Identidade Visual</label>
-                        <div className="aspect-square rounded-3xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-6 text-center group hover:border-primary/50 transition-all relative overflow-hidden">
-                          {form.identityType === 'emoji' ? (
-                            <div className="text-7xl group-hover:scale-110 transition-transform">{form.emoji || '📦'}</div>
-                          ) : (
-                            form.images?.[0] ? (
-                              <img src={form.images[0].url} alt="Preview" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            ) : (
-                              <div className="flex flex-col items-center gap-2">
-                                <Plus className="text-muted group-hover:text-primary" size={32} />
-                                <span className="text-[10px] font-bold text-muted uppercase">Upload Imagem</span>
-                              </div>
-                            )
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest block flex justify-between items-center">
+                          Identidade Visual
+                          {form.identityType === 'image' && (
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-primary hover:underline flex items-center gap-1">
+                              <Plus size={10} /> Adicionar
+                            </button>
                           )}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
-                            <button type="button" className="p-2 rounded-full bg-white/10 hover:bg-primary text-white transition-all" onClick={() => setForm({ ...form, identityType: 'emoji' })} title="Usar Emoji">
-                              <Layout size={16} />
-                            </button>
-                            <button type="button" className="p-2 rounded-full bg-white/10 hover:bg-primary text-white transition-all" onClick={() => { setForm({ ...form, identityType: 'image' }); fileInputRef.current?.click(); }} title="Upload Imagem">
-                              <ImageIcon size={16} />
-                            </button>
-                          </div>
-                        </div>
+                        </label>
                         
-                        <div className="flex bg-black/40 rounded-xl p-1 border border-white/5">
-                          <button className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all ${form.identityType === 'emoji' ? 'bg-primary text-white' : 'text-muted'}`} onClick={() => setForm({ ...form, identityType: 'emoji' })}>Emoji</button>
-                          <button className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all ${form.identityType === 'image' ? 'bg-primary text-white' : 'text-muted'}`} onClick={() => setForm({ ...form, identityType: 'image' })}>Imagem</button>
+                        <div className="flex bg-black/40 rounded-xl p-1 border border-white/5 mb-4">
+                          <button className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all ${form.identityType === 'emoji' ? 'bg-primary text-white' : 'text-muted hover:bg-white/5'}`} onClick={() => setForm({ ...form, identityType: 'emoji' })}>Emoji</button>
+                          <button className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all ${form.identityType === 'image' ? 'bg-primary text-white' : 'text-muted hover:bg-white/5'}`} onClick={() => setForm({ ...form, identityType: 'image' })}>Galeria</button>
                         </div>
 
-                        {form.identityType === 'emoji' && (
-                          <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center gap-3">
-                            <span className="text-[10px] font-black text-muted uppercase tracking-widest">Escolher Ícone</span>
-                            <EmojiPicker value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e })} />
+                        {form.identityType === 'emoji' ? (
+                          <div className="space-y-4">
+                            <div className="aspect-square rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+                              <div className="text-7xl">{form.emoji || '📦'}</div>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center gap-3">
+                              <span className="text-[10px] font-black text-muted uppercase tracking-widest">Escolher Ícone</span>
+                              <EmojiPicker value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e })} />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {(!form.images || form.images.length === 0) ? (
+                              <div onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-3xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-6 text-center group hover:border-primary/50 hover:bg-white/10 transition-all cursor-pointer">
+                                <Plus className="text-muted group-hover:text-primary mb-2 transition-colors" size={32} />
+                                <span className="text-[10px] font-bold text-muted uppercase">Upload Imagem</span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Foto Principal */}
+                                <div 
+                                  className={`aspect-square rounded-3xl bg-black/40 border-2 relative overflow-hidden group cursor-pointer transition-all ${draggedIndex === 0 ? 'border-primary opacity-50 scale-95' : 'border-white/10 hover:border-white/30'}`}
+                                  onClick={() => setPreviewImage(form.images[0].url)}
+                                  draggable
+                                  onDragStart={() => onDragStart(0)}
+                                  onDragOver={onDragOver}
+                                  onDrop={() => onDrop(0)}
+                                >
+                                  <img src={form.images[0].url} alt="Principal" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                  <div className="absolute top-3 left-3 pointer-events-none">
+                                    <span className="bg-primary/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md backdrop-blur-md">Principal</span>
+                                  </div>
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); setForm({ ...form, images: form.images.slice(1) }); }} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white backdrop-blur-md opacity-100 transition-all shadow-xl z-10" title="Remover Foto">
+                                    <Trash2 size={14} strokeWidth={2.5} />
+                                  </button>
+                                  <div className="absolute bottom-3 inset-x-0 text-center text-[10px] font-bold text-white/80 uppercase tracking-widest flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    <Eye size={12} /> Ampliar
+                                  </div>
+                                </div>
+                                
+                                {/* Grade de Miniaturas */}
+                                {form.images.length > 1 && (
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {form.images.slice(1).map((img, idx) => {
+                                      const actualIdx = idx + 1;
+                                      return (
+                                        <div 
+                                          key={img.id || actualIdx}
+                                          className={`aspect-square rounded-xl bg-black/40 border-2 relative overflow-hidden group cursor-pointer transition-all ${draggedIndex === actualIdx ? 'border-primary opacity-50 scale-95' : 'border-white/5 hover:border-white/20'}`}
+                                          onClick={() => setPreviewImage(img.url)}
+                                          draggable
+                                          onDragStart={() => onDragStart(actualIdx)}
+                                          onDragOver={onDragOver}
+                                          onDrop={() => onDrop(actualIdx)}
+                                        >
+                                          <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                          <button type="button" onClick={(e) => { e.stopPropagation(); setForm({ ...form, images: form.images.filter((_, i) => i !== actualIdx) }); }} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white opacity-100 transition-all z-10" title="Remover Foto">
+                                            <Trash2 size={12} strokeWidth={2.5} />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                    <div 
+                                      onClick={() => fileInputRef.current?.click()} 
+                                      className="aspect-square rounded-xl border-2 border-dashed border-white/10 bg-white/5 flex items-center justify-center text-muted hover:text-primary hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all"
+                                      title="Adicionar mais imagens"
+                                    >
+                                      <Plus size={16} />
+                                    </div>
+                                  </div>
+                                )}
+                                {form.images.length === 1 && (
+                                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full py-3 rounded-xl border border-dashed border-white/10 bg-white/5 flex items-center justify-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all">
+                                    <Plus size={12} /> Adicionar mais fotos
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
 
                       {/* Informações Básicas */}
                       <div className="md:col-span-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="form-group">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Tipo do Produto</label>
+                            <select className="input-field h-12 bg-white/5 border-white/10" value={form.productType} onChange={e => setForm({ ...form, productType: e.target.value })}>
+                              <option value="simples">Simples</option>
+                              <option value="com_variacoes">Com Variações</option>
+                              <option value="kit">Kit</option>
+                              <option value="materia_prima">Matéria-prima</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Tipo SPED</label>
+                            <select className="input-field h-12 bg-white/5 border-white/10" value={form.itemTypeSped} onChange={e => setForm({ ...form, itemTypeSped: e.target.value })}>
+                              <option value="00">00 - Mercadoria para Revenda</option>
+                              <option value="01">01 - Matéria-Prima</option>
+                              <option value="02">02 - Embalagem</option>
+                              <option value="03">03 - Produto em Processo</option>
+                              <option value="04">04 - Produto Acabado</option>
+                              <option value="05">05 - Subproduto</option>
+                              <option value="06">06 - Produto Intermediário</option>
+                              <option value="07">07 - Material de Uso e Consumo</option>
+                              <option value="08">08 - Ativo Imobilizado</option>
+                              <option value="09">09 - Serviços</option>
+                              <option value="10">10 - Outros insumos</option>
+                              <option value="99">99 - Outras</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Cód. de Barras (EAN)</label>
+                            <input className="input-field h-12 bg-white/5 border-white/10 font-mono" value={form.ean || ''} onChange={e => setForm({ ...form, ean: e.target.value })} placeholder="Ex: 7890000000000" />
+                          </div>
+                        </div>
+                        
                         <div className="form-group">
                           <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Nome do Produto *</label>
                           <input className="input-field h-14 text-lg font-bold bg-white/5 border-white/10" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Açaí Premium 5L" />
@@ -675,9 +789,93 @@ export default function Products() {
                       </div>
                     </div>
 
-                    <div className="form-group">
-                      <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Descrição Curta</label>
-                      <textarea className="input-field min-h-[100px] py-3 bg-white/5 border-white/10" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Uma breve descrição para listagens..." />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="form-group">
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Descrição Curta</label>
+                        <textarea className="input-field min-h-[120px] py-3 bg-white/5 border-white/10 text-xs" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Uma breve descrição para listagens..." />
+                      </div>
+                      <div className="form-group">
+                        <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Descrição Completa</label>
+                        <div className="flex flex-col bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                          <div className="flex items-center gap-2 p-2 border-b border-white/10 bg-black/20">
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><strong className="font-serif">B</strong></button>
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><em className="font-serif">I</em></button>
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><u className="font-serif">U</u></button>
+                            <div className="w-px h-4 bg-white/10 mx-1" />
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><AlignLeft size={14} /></button>
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><AlignCenter size={14} /></button>
+                            <button className="p-1.5 hover:bg-white/10 rounded text-muted"><AlignRight size={14} /></button>
+                          </div>
+                          <textarea className="flex-1 bg-transparent border-none focus:ring-0 p-3 text-xs min-h-[120px] resize-none" value={form.richDescription || ''} onChange={e => setForm({ ...form, richDescription: e.target.value })} placeholder="Descrição detalhada para e-commerce e propostas comerciais..." />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {modalTab === 'composicao' && (
+                  <div className="space-y-8 animate-fade">
+                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-3">
+                          <Layers size={18} className="text-primary" />
+                          <h4 className="text-xs font-black text-white uppercase tracking-widest">Insumos e Composição</h4>
+                        </div>
+                        <button className="btn btn-sm btn-primary" onClick={() => setForm({ ...form, components: [...(form.components || []), { name: '', qty: '', cost: '' }] })}>
+                          <Plus size={14} /> Adicionar Insumo
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {(form.components || []).length > 0 && (
+                          <div className="grid grid-cols-[1fr_100px_100px_100px_40px] gap-4 px-4 pb-2">
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Produto/Insumo</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Qtd Utilizada</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Custo Unit.</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest text-right">Custo Total</span>
+                            <span />
+                          </div>
+                        )}
+                        {(form.components || []).map((comp, i) => (
+                          <div key={i} className="grid grid-cols-[1fr_100px_100px_100px_40px] gap-4 items-center p-3 rounded-xl bg-black/20 border border-white/5">
+                            <input className="input-field h-10 bg-white/5 border-white/10 text-xs" value={comp.name} onChange={e => {
+                              const n = [...(form.components || [])]; n[i].name = e.target.value; setForm({ ...form, components: n });
+                            }} placeholder="Buscar insumo..." />
+                            
+                            <input className="input-field h-10 bg-white/5 border-white/10 text-xs text-center" type="number" step="0.001" value={comp.qty} onChange={e => {
+                              const n = [...(form.components || [])]; n[i].qty = e.target.value; setForm({ ...form, components: n });
+                            }} placeholder="0.000" />
+                            
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted text-[10px]">R$</span>
+                              <input className="input-field h-10 pl-6 bg-white/5 border-white/10 text-xs" type="number" step="0.01" value={comp.cost} onChange={e => {
+                                const n = [...(form.components || [])]; n[i].cost = e.target.value; setForm({ ...form, components: n });
+                              }} placeholder="0,00" />
+                            </div>
+
+                            <div className="text-right text-xs font-bold text-white/80">
+                              {fmt((parseFloat(comp.qty || 0) * parseFloat(comp.cost || 0)).toFixed(2))}
+                            </div>
+
+                            <button className="w-10 h-10 rounded-lg bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400 hover:text-white transition-all" onClick={() => {
+                              setForm({ ...form, components: form.components.filter((_, idx) => idx !== i) });
+                            }}><Trash2 size={14} /></button>
+                          </div>
+                        ))}
+                        {(!form.components || form.components.length === 0) && (
+                          <div className="py-8 text-center text-muted/50 text-[10px] uppercase tracking-widest font-bold">
+                            Nenhum insumo adicionado a esta composição.
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+                        <div className="text-right">
+                          <span className="text-[10px] font-black text-muted uppercase tracking-widest block mb-1">Custo Total da Composição</span>
+                          <span className="text-xl font-black text-white">
+                            {fmt((form.components || []).reduce((acc, curr) => acc + (parseFloat(curr.qty || 0) * parseFloat(curr.cost || 0)), 0).toFixed(2))}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -785,6 +983,79 @@ export default function Products() {
                         </button>
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="form-group">
+                        <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Controlar Estoque</label>
+                        <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.controlStock} onChange={e => setForm({ ...form, controlStock: e.target.value })}>
+                          <option value="sim">Sim</option>
+                          <option value="nao">Não</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Sob Encomenda</label>
+                        <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.underOrder} onChange={e => setForm({ ...form, underOrder: e.target.value })}>
+                          <option value="sim">Sim</option>
+                          <option value="nao">Não</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Controlar Lotes</label>
+                        <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.controlLots} onChange={e => setForm({ ...form, controlLots: e.target.value })}>
+                          <option value="sim">Sim</option>
+                          <option value="nao">Não</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {form.controlLots === 'sim' && (
+                      <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4 animate-fade">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                          <div className="flex items-center gap-2">
+                            <Layers size={16} className="text-primary" />
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Controle de Lotes e Validade</h4>
+                          </div>
+                          <button className="btn btn-sm btn-primary" onClick={() => setForm({ ...form, batches: [...(form.batches || []), { lotNumber: '', validity: '', qty: '' }] })}>
+                            <Plus size={14} /> Novo Lote
+                          </button>
+                        </div>
+                        
+                        {(form.batches || []).length > 0 && (
+                          <div className="grid grid-cols-[1fr_1fr_100px_40px] gap-3 px-3 pb-1">
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Número do Lote</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Data de Validade</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Qtd no Lote</span>
+                            <span />
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          {(form.batches || []).map((batch, i) => (
+                            <div key={i} className="grid grid-cols-[1fr_1fr_100px_40px] gap-3 p-3 rounded-xl bg-black/20 border border-white/5 items-center">
+                              <input className="input-field h-10 bg-white/5 border-white/10 text-xs font-mono" value={batch.lotNumber} onChange={e => {
+                                const n = [...(form.batches || [])]; n[i].lotNumber = e.target.value; setForm({ ...form, batches: n });
+                              }} placeholder="Lote..." />
+                              
+                              <input className="input-field h-10 bg-white/5 border-white/10 text-xs" type="date" value={batch.validity} onChange={e => {
+                                const n = [...(form.batches || [])]; n[i].validity = e.target.value; setForm({ ...form, batches: n });
+                              }} />
+                              
+                              <input className="input-field h-10 bg-white/5 border-white/10 text-xs text-center" type="number" value={batch.qty} onChange={e => {
+                                const n = [...(form.batches || [])]; n[i].qty = e.target.value; setForm({ ...form, batches: n });
+                              }} placeholder="0" />
+                              
+                              <button className="w-10 h-10 rounded-lg bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400 hover:text-white transition-all" onClick={() => {
+                                setForm({ ...form, batches: (form.batches || []).filter((_, idx) => idx !== i) });
+                              }}><Trash2 size={14} /></button>
+                            </div>
+                          ))}
+                          {(!form.batches || form.batches.length === 0) && (
+                            <div className="py-6 text-center text-[10px] text-muted/50 italic font-bold uppercase tracking-widest">
+                              Nenhum lote registrado
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -850,7 +1121,71 @@ export default function Products() {
                     </div>
                   </div>
                 )}
+                {modalTab === 'nutricional' && (
+                  <div className="space-y-8 animate-fade">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                          <Activity size={18} className="text-primary" />
+                          <h4 className="text-xs font-black text-white uppercase tracking-widest">Informação Nutricional</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="form-group">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Porção (g/ml)</label>
+                            <input className="input-field h-12 bg-white/5 border-white/10" value={form.nutritionInfo?.portion || ''} onChange={e => setForm({ ...form, nutritionInfo: { ...form.nutritionInfo, portion: e.target.value } })} placeholder="Ex: 60" />
+                          </div>
+                          <div className="form-group">
+                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Medida Caseira</label>
+                            <input className="input-field h-12 bg-white/5 border-white/10" value={form.nutritionInfo?.measure || ''} onChange={e => setForm({ ...form, nutritionInfo: { ...form.nutritionInfo, measure: e.target.value } })} placeholder="Ex: 1 bola" />
+                          </div>
+                        </div>
 
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-2 pb-1 border-b border-white/5">
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest">Nutriente</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest text-right">Qtd</span>
+                            <span className="text-[9px] font-black text-muted uppercase tracking-widest text-right">%VD</span>
+                          </div>
+                          {[
+                            { id: 'calories', label: 'Valor Energético (kcal)' },
+                            { id: 'carbs', label: 'Carboidratos (g)' },
+                            { id: 'protein', label: 'Proteínas (g)' },
+                            { id: 'fat', label: 'Gorduras Totais (g)' },
+                            { id: 'sodium', label: 'Sódio (mg)' }
+                          ].map(nutrient => (
+                            <div key={nutrient.id} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center p-2 rounded-lg hover:bg-white/5 transition-all">
+                              <span className="text-xs font-bold text-white/80">{nutrient.label}</span>
+                              <input className="input-field h-8 bg-black/20 border-white/5 text-xs text-right" value={form.nutritionInfo?.[nutrient.id]?.amount || ''} onChange={e => setForm({ ...form, nutritionInfo: { ...form.nutritionInfo, [nutrient.id]: { ...form.nutritionInfo?.[nutrient.id], amount: e.target.value } } })} placeholder="0" />
+                              <input className="input-field h-8 bg-black/20 border-white/5 text-xs text-right" value={form.nutritionInfo?.[nutrient.id]?.vd || ''} onChange={e => setForm({ ...form, nutritionInfo: { ...form.nutritionInfo, [nutrient.id]: { ...form.nutritionInfo?.[nutrient.id], vd: e.target.value } } })} placeholder="0%" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4">
+                          <div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-2">
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Alérgenos e Restrições</h4>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {['Glúten', 'Lactose', 'Amendoim', 'Soja', 'Açúcar', 'Vegano'].map(alergeno => (
+                              <label key={alergeno} className="flex items-center gap-2 p-2 rounded-lg border border-white/5 bg-black/20 cursor-pointer hover:bg-white/5 transition-all">
+                                <input type="checkbox" className="rounded text-primary focus:ring-primary/20 bg-black/40 border-white/10" 
+                                  checked={form.nutritionInfo?.allergens?.includes(alergeno)}
+                                  onChange={e => {
+                                    const al = form.nutritionInfo?.allergens || [];
+                                    setForm({ ...form, nutritionInfo: { ...form.nutritionInfo, allergens: e.target.checked ? [...al, alergeno] : al.filter(a => a !== alergeno) } });
+                                  }}
+                                />
+                                <span className="text-[10px] font-bold text-white/80">{alergeno}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {modalTab === 'fiscal' && (
                   <div className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -878,17 +1213,48 @@ export default function Products() {
                         <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Configurações de Tributação</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="form-group">
-                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Situação Tributária ICMS</label>
-                          <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.icms_sit_trib} onChange={e => setForm({ ...form, icms_sit_trib: e.target.value })}>
-                            <option value="102">102 - Simples Nacional (Sem crédito)</option>
-                            <option value="500">500 - ICMS Cobrado anteriormente</option>
-                            <option value="00">00 - Tributada integralmente</option>
-                          </select>
+                        <div className="space-y-4">
+                          <div className="form-group">
+                            <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Situação Tributária ICMS</label>
+                            <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.icms_sit_trib} onChange={e => setForm({ ...form, icms_sit_trib: e.target.value })}>
+                              <option value="102">102 - Simples Nacional (Sem crédito)</option>
+                              <option value="500">500 - ICMS Cobrado anteriormente</option>
+                              <option value="00">00 - Tributada integralmente</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">CFOP Padrão (Estadual / Interestadual)</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input className="input-field h-10 bg-black/20 border-white/5 text-xs text-center font-mono" value={form.fiscal?.cfopState || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, cfopState: e.target.value } })} placeholder="5102" />
+                              <input className="input-field h-10 bg-black/20 border-white/5 text-xs text-center font-mono" value={form.fiscal?.cfopInterstate || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, cfopInterstate: e.target.value } })} placeholder="6102" />
+                            </div>
+                          </div>
                         </div>
-                        <div className="form-group">
-                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Cód. Enquadramento IPI</label>
-                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.ipiCode || ''} onChange={e => setForm({ ...form, ipiCode: e.target.value })} placeholder="Ex: 999" />
+
+                        <div className="space-y-4">
+                          <div className="form-group">
+                            <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">PIS / COFINS</label>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div>
+                                <span className="text-[8px] text-muted block mb-1">CST PIS</span>
+                                <input className="input-field h-10 bg-black/20 border-white/5 text-xs text-center" value={form.fiscal?.pisCst || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, pisCst: e.target.value } })} placeholder="01" />
+                              </div>
+                              <div>
+                                <span className="text-[8px] text-muted block mb-1">CST COFINS</span>
+                                <input className="input-field h-10 bg-black/20 border-white/5 text-xs text-center" value={form.fiscal?.cofinsCst || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, cofinsCst: e.target.value } })} placeholder="01" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="relative">
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted text-[10px]">%</span>
+                                <input className="input-field h-10 pr-6 bg-black/20 border-white/5 text-xs" type="number" step="0.01" value={form.fiscal?.pisRate || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, pisRate: e.target.value } })} placeholder="Alíquota PIS" />
+                              </div>
+                              <div className="relative">
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted text-[10px]">%</span>
+                                <input className="input-field h-10 pr-6 bg-black/20 border-white/5 text-xs" type="number" step="0.01" value={form.fiscal?.cofinsRate || ''} onChange={e => setForm({ ...form, fiscal: { ...form.fiscal, cofinsRate: e.target.value } })} placeholder="Alíq. COFINS" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -908,18 +1274,34 @@ export default function Products() {
                       
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         {(form.images || []).map((img, idx) => (
-                          <div key={idx} className="group aspect-square rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden">
-                            <img src={img.url} alt="Product" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <button onClick={() => setForm({ ...form, images: form.images.filter((_, i) => i !== idx) })} className="p-2 rounded-full bg-rose-500 text-white shadow-lg"><Trash2 size={12} /></button>
-                              {idx === 0 && <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-primary text-[8px] font-black text-white uppercase">Capa</span>}
+                          <div 
+                            key={img.id || idx} 
+                            className={`group aspect-square rounded-2xl bg-black/40 border-2 relative overflow-hidden cursor-pointer transition-all ${draggedIndex === idx ? 'border-primary opacity-50 scale-95' : 'border-white/10 hover:border-white/30'}`}
+                            onClick={() => setPreviewImage(img.url)}
+                            draggable
+                            onDragStart={() => onDragStart(idx)}
+                            onDragOver={onDragOver}
+                            onDrop={() => onDrop(idx)}
+                          >
+                            <img src={img.url} alt="Product" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 pointer-events-none">
+                              <div className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-1 mb-2">
+                                <Eye size={12} /> Ampliar
+                              </div>
                             </div>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setForm({ ...form, images: form.images.filter((_, i) => i !== idx) }); }} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white opacity-100 transition-all shadow-lg z-10" title="Remover Foto">
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </button>
+                            {idx === 0 && <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-primary text-[8px] font-black text-white uppercase shadow-md backdrop-blur-md pointer-events-none">Principal</span>}
                           </div>
                         ))}
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-white/5 hover:border-primary/40 hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-2 text-muted hover:text-primary">
+                        <div 
+                          onClick={() => fileInputRef.current?.click()} 
+                          className="aspect-square rounded-2xl border-2 border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 text-muted hover:text-primary cursor-pointer"
+                        >
                           <Plus size={24} />
                           <span className="text-[9px] font-black uppercase">Upload</span>
-                        </button>
+                        </div>
                       </div>
                     </div>
 
@@ -1010,6 +1392,229 @@ export default function Products() {
                     </div>
                   </div>
                 )}
+
+                {/* ─── FICHA TÉCNICA ─── */}
+                {modalTab === 'ficha' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-black text-white">Ficha Técnica</h4>
+                        <p className="text-[10px] text-muted mt-0.5">Atributos técnicos exibidos na loja online</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, attributes: [...(form.attributes || []), { attribute: '', value: '' }] })}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/30 transition-all"
+                      >
+                        <Plus size={12} /> Adicionar Atributo
+                      </button>
+                    </div>
+                    {(form.attributes || []).length > 0 && (
+                      <div className="grid grid-cols-[1fr_1fr_40px] gap-3 px-3 pb-1 border-b border-white/5">
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Atributo</span>
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Valor</span>
+                        <span />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {(form.attributes || []).map((attr, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_1fr_40px] gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs font-bold" value={attr.attribute} onChange={e => { const n = [...(form.attributes||[])]; n[i]={...n[i],attribute:e.target.value}; setForm({...form,attributes:n}); }} placeholder="Ex: Peso, Sabor, Tamanho..." />
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={attr.value} onChange={e => { const n = [...(form.attributes||[])]; n[i]={...n[i],value:e.target.value}; setForm({...form,attributes:n}); }} placeholder="Ex: 500g, Morango, M" />
+                          <button type="button" onClick={() => setForm({...form,attributes:(form.attributes||[]).filter((_,idx)=>idx!==i)})} className="w-10 h-10 rounded-lg bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400 hover:text-white transition-all"><Trash2 size={13} /></button>
+                        </div>
+                      ))}
+                    </div>
+                    {(!form.attributes || form.attributes.length === 0) && (
+                      <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 rounded-2xl bg-white/5 border border-dashed border-white/10">
+                        <ClipboardList size={32} className="text-muted/30" />
+                        <div>
+                          <p className="text-[11px] font-black text-muted uppercase tracking-widest">Nenhum atributo</p>
+                          <p className="text-[10px] text-muted/50 mt-1">Adicione características técnicas do produto</p>
+                        </div>
+                        <button type="button" onClick={() => setForm({...form,attributes:[{attribute:'',value:''}]})} className="px-4 py-2 rounded-xl bg-white/10 text-muted text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">+ Primeiro Atributo</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {modalTab === 'anexos' && (
+                  <div className="space-y-8 animate-fade">
+                    <div className="p-6 rounded-3xl bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center py-16 text-center space-y-4 relative group hover:border-primary/50 transition-all">
+                      <div className="w-16 h-16 rounded-2xl bg-black/40 flex items-center justify-center text-muted group-hover:text-primary transition-colors border border-white/5">
+                        <Paperclip size={24} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-white">Anexos Técnicos</h4>
+                        <p className="text-[10px] text-muted/60 mt-1 max-w-sm mx-auto">Upload de laudos, manuais, FISPQ ou certificados. Formatos aceitos: PDF, DOCX, JPG (Max. 5MB)</p>
+                      </div>
+                      <button className="btn btn-primary btn-sm mt-2 relative overflow-hidden group/btn">
+                        <span className="relative z-10 flex items-center gap-2"><Plus size={14} /> Selecionar Arquivo</span>
+                      </button>
+                    </div>
+
+                    {(form.attachments || []).length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-black text-muted uppercase tracking-widest pl-2">Arquivos Anexados</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(form.attachments || []).map((file, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                                  <FileText size={18} />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white truncate">{file.name}</p>
+                                  <p className="text-[9px] text-muted">{file.size} • {file.date}</p>
+                                </div>
+                              </div>
+                              <button className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {modalTab === 'historico' && (
+                  <div className="space-y-8 animate-fade">
+                    <div className="p-6 rounded-3xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                        <History size={18} className="text-primary" />
+                        <h4 className="text-xs font-black text-white uppercase tracking-widest">Logs de Auditoria</h4>
+                      </div>
+                      
+                      <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
+                        {(!form.logs || form.logs.length === 0) ? (
+                          <div className="text-center py-8 text-muted/50 text-[10px] uppercase tracking-widest font-bold">
+                            Nenhum registro encontrado.
+                          </div>
+                        ) : (
+                          form.logs.map((log, i) => (
+                            <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#0f1115] bg-white/10 text-muted group-hover:text-primary group-hover:bg-primary/20 transition-colors shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-xl">
+                                {log.action === 'create' ? <Plus size={14} /> : log.action === 'delete' ? <Trash2 size={14} /> : <Settings size={14} />}
+                              </div>
+                              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white/5 border border-white/5 shadow-xl transition-all hover:bg-white/10">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-bold text-white">{log.user}</span>
+                                  <span className="text-[9px] text-muted font-mono">{log.date}</span>
+                                </div>
+                                <p className="text-[10px] text-muted/80 leading-relaxed">{log.details}</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── OUTROS ─── */}
+                {modalTab === 'outros' && (
+                  <div className="space-y-8">
+                    {/* Informações gerais */}
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-5">
+                      <h4 className="text-[10px] font-black text-muted uppercase tracking-widest border-b border-white/5 pb-3">Informações Gerais</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Unid. por Caixa</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" type="number" value={form.itemsPerBox||''} onChange={e=>setForm({...form,itemsPerBox:e.target.value})} placeholder="1" />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Linha de Produto</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.productLine||''} onChange={e=>setForm({...form,productLine:e.target.value})} placeholder="Ex: Premium" />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Garantia</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.guarantee||''} onChange={e=>setForm({...form,guarantee:e.target.value})} placeholder="Ex: 3 meses" />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Permitir nas Vendas</label>
+                          <select className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.allowInSales} onChange={e=>setForm({...form,allowInSales:e.target.value})}>
+                            <option value="sim">Sim</option>
+                            <option value="nao">Não</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Informações Tributárias Adicionais */}
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-5">
+                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                        <ShieldCheck size={15} className="text-amber-400" />
+                        <h4 className="text-[10px] font-black text-muted uppercase tracking-widest">Informações Tributárias Adicionais</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">GTIN/EAN Tributável</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs font-mono" value={form.eanTributavel||''} onChange={e=>setForm({...form,eanTributavel:e.target.value})} placeholder="Caixa, Fardo, Lote..." />
+                          <p className="text-[9px] text-muted/40 mt-1">Para Caixa, Fardo, Lote</p>
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Unidade Tributável</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.tributaryUnit||''} onChange={e=>setForm({...form,tributaryUnit:e.target.value})} />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Fator de Conversão</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" type="number" step="0.001" value={form.conversionFactor||''} onChange={e=>setForm({...form,conversionFactor:e.target.value})} />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Cód. Enquadramento IPI</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.ipiCode||''} onChange={e=>setForm({...form,ipiCode:e.target.value})} placeholder="Ex: 999" />
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">Valor IPI Fixo (R$)</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" type="number" step="0.01" value={form.ipiFixed||''} onChange={e=>setForm({...form,ipiFixed:e.target.value})} placeholder="0,00" />
+                          <p className="text-[9px] text-muted/40 mt-1">Tributação específica</p>
+                        </div>
+                        <div className="form-group">
+                          <label className="text-[9px] font-bold text-muted/60 uppercase mb-2 block">EX-TIPI</label>
+                          <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={form.extipi||''} onChange={e=>setForm({...form,extipi:e.target.value})} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fornecedores */}
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Truck size={15} className="text-blue-400" />
+                          <h4 className="text-[10px] font-black text-muted uppercase tracking-widest">Fornecedores</h4>
+                        </div>
+                        <button type="button" onClick={() => setForm({...form,suppliers:[...(form.suppliers||[]),{name:'',code:''}]})} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1"><Plus size={10} /> adicionar fornecedor</button>
+                      </div>
+                      {(form.suppliers||[]).length > 0 && (
+                        <div className="grid grid-cols-[1fr_1fr_40px] gap-3 px-3 pb-1">
+                          <span className="text-[9px] font-black text-muted uppercase tracking-widest">Nome</span>
+                          <span className="text-[9px] font-black text-muted uppercase tracking-widest">Código no Fornecedor</span>
+                          <span />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        {(form.suppliers||[]).map((sup, i) => (
+                          <div key={i} className="grid grid-cols-[1fr_1fr_40px] gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                            <input className="input-field h-10 bg-black/20 border-white/5 text-xs" value={sup.name} onChange={e=>{const n=[...(form.suppliers||[])];n[i]={...n[i],name:e.target.value};setForm({...form,suppliers:n});}} placeholder="Nome do fornecedor" />
+                            <input className="input-field h-10 bg-black/20 border-white/5 text-xs font-mono" value={sup.code} onChange={e=>{const n=[...(form.suppliers||[])];n[i]={...n[i],code:e.target.value};setForm({...form,suppliers:n});}} placeholder="Código no fornecedor" />
+                            <button type="button" onClick={()=>setForm({...form,suppliers:(form.suppliers||[]).filter((_,idx)=>idx!==i)})} className="w-10 h-10 rounded-lg bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400 hover:text-white transition-all"><Trash2 size={13} /></button>
+                          </div>
+                        ))}
+                        {(!form.suppliers||form.suppliers.length===0) && (
+                          <div className="py-6 text-center text-[10px] text-muted/50 italic">Nenhum fornecedor vinculado</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    <div className="form-group">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Observações Gerais (uso interno)</label>
+                      <textarea className="input-field min-h-[120px] py-3 bg-white/5 border-white/10 text-xs" value={form.internalNotes||''} onChange={e=>setForm({...form,internalNotes:e.target.value})} placeholder="Informações de uso interno. Não é exibido para o cliente." />
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -1023,18 +1628,40 @@ export default function Products() {
               </button>
             </div>
           </div>
+          <input type="file" ref={fileInputRef} hidden onChange={handleFileUpload} accept="image/*" />
         </div>
       )}
 
       {/* Lightbox Preview */}
       {previewImage && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-8 bg-black/90 backdrop-blur-2xl animate-fade cursor-zoom-out" onClick={() => setPreviewImage(null)}>
-          <button className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-all border border-white/10">
-            <X size={24} />
-          </button>
-          <div className="relative group max-w-[90vw] max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <img src={previewImage} alt="Preview" className="w-full h-full object-contain rounded-3xl shadow-2xl border border-white/10 animate-zoom-in" />
-            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">
+          
+          <div className="absolute top-8 right-8 flex items-center gap-4 z-50">
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setForm({ 
+                  ...form, 
+                  images: (form.images || []).filter(img => img.url !== previewImage) 
+                });
+                setPreviewImage(null);
+                toast.success('Foto removida');
+              }}
+              className="flex items-center gap-2 px-4 py-3 rounded-full bg-black/70 text-red-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white backdrop-blur-md shadow-2xl transition-all border border-red-500/30 hover:border-red-500"
+            >
+              <Trash2 size={16} strokeWidth={2.5} /> Remover Foto
+            </button>
+            
+            <button className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-all border border-white/10">
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center group" onClick={e => e.stopPropagation()}>
+            <img src={previewImage} alt="Preview" className="w-full h-full object-contain rounded-3xl shadow-2xl border border-white/10 animate-zoom-in cursor-default" />
+            
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-white/40 text-[10px] font-black uppercase tracking-[0.3em] pointer-events-none">
               Clique fora para fechar
             </div>
           </div>

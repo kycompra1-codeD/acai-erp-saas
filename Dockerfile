@@ -1,37 +1,48 @@
 # Estágio de Build
 FROM node:20-alpine AS build
 
+# Definir o diretório de trabalho
 WORKDIR /app
 
-# Copiar apenas os arquivos de dependências primeiro para aproveitar o cache do Docker
+# Copiar arquivos de dependências
+# Usar curinga para garantir que package.json e package-lock.json sejam copiados
 COPY package*.json ./
-RUN npm install
 
-# Copiar o restante do código e gerar o build de produção
+# Instalar dependências (usando install em vez de ci para maior flexibilidade com legacy-peer-deps)
+RUN npm install --legacy-peer-deps
+
+# Copiar o restante do código-fonte
 COPY . .
+
+# Gerar o build de produção
 RUN npm run build
 
 # Estágio de Produção (Nginx)
 FROM nginx:stable-alpine
 
+# Metadados da imagem
+LABEL maintainer="Açaí ERP Team"
+LABEL version="1.0.0"
+
 # Copiar os arquivos estáticos do estágio de build para o diretório do Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Configuração customizada para lidar com rotas do React (SPA)
-# Redireciona todas as requisições para o index.html para que o React Router assuma
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html; \
-    } \
-    error_page 500 502 503 504 /50x.html; \
-    location = /50x.html { \
-        root /usr/share/nginx/html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Configuração customizada para o Nginx (SPA handling)
+RUN printf "server { \n\
+    listen 80; \n\
+    location / { \n\
+        root /usr/share/nginx/html; \n\
+        index index.html index.htm; \n\
+        try_files \$uri \$uri/ /index.html; \n\
+    } \n\
+    error_page 500 502 503 504 /50x.html; \n\
+    location = /50x.html { \n\
+        root /usr/share/nginx/html; \n\
+    } \n\
+}" > /etc/nginx/conf.d/default.conf
 
+# Expor a porta padrão do Nginx
 EXPOSE 80
 
+# Comando para iniciar o Nginx
 CMD ["nginx", "-g", "daemon off;"]
