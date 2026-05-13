@@ -69,6 +69,16 @@ app.use(express.urlencoded({ extended: true }));
 const authRoutes = require('./routes/auth');
 const usuariosRoutes = require('./routes/usuarios');
 const webhookRoutes = require('./routes/webhook');
+const produtosRoutes = require('./routes/produtos');
+const clientesRoutes = require('./routes/clientes');
+const fornecedoresRoutes = require('./routes/fornecedores');
+const funcionariosRoutes = require('./routes/funcionarios');
+const pedidosRoutes = require('./routes/pedidos');
+const estoqueRoutes = require('./routes/estoque');
+const comprasRoutes = require('./routes/compras');
+const financeiroRoutes = require('./routes/financeiro');
+const dashboardRoutes = require('./routes/dashboard');
+const relatoriosRoutes = require('./routes/relatorios');
 
 // Health check
 app.get('/health', (req, res) => {
@@ -84,6 +94,16 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/produtos', produtosRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/fornecedores', fornecedoresRoutes);
+app.use('/api/funcionarios', funcionariosRoutes);
+app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/estoque', estoqueRoutes);
+app.use('/api/compras', comprasRoutes);
+app.use('/api/financeiro', financeiroRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/relatorios', relatoriosRoutes);
 
 // ============================================================
 // Rota 404

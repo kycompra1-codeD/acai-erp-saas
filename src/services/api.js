@@ -141,6 +141,124 @@ export const usuariosApi = {
 };
 
 // ============================================================
+// Produtos + Categorias
+// ============================================================
+export const produtosApi = {
+  listar: (params = {}) => apiFetch('/produtos?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/produtos/${id}`),
+  criar: (dados) => apiFetch('/produtos', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/produtos/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  desativar: (id) => apiFetch(`/produtos/${id}`, { method: 'DELETE' }),
+
+  categorias: {
+    listar: () => apiFetch('/produtos/categorias'),
+    criar: (dados) => apiFetch('/produtos/categorias', { method: 'POST', body: JSON.stringify(dados) }),
+    editar: (id, dados) => apiFetch(`/produtos/categorias/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+    desativar: (id) => apiFetch(`/produtos/categorias/${id}`, { method: 'DELETE' }),
+  },
+};
+
+// ============================================================
+// Clientes
+// ============================================================
+export const clientesApi = {
+  listar: (params = {}) => apiFetch('/clientes?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/clientes/${id}`),
+  criar: (dados) => apiFetch('/clientes', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  desativar: (id) => apiFetch(`/clientes/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Fornecedores
+// ============================================================
+export const fornecedoresApi = {
+  listar: (params = {}) => apiFetch('/fornecedores?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/fornecedores/${id}`),
+  criar: (dados) => apiFetch('/fornecedores', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/fornecedores/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  desativar: (id) => apiFetch(`/fornecedores/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Funcionários
+// ============================================================
+export const funcionariosApi = {
+  listar: (params = {}) => apiFetch('/funcionarios?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/funcionarios/${id}`),
+  criar: (dados) => apiFetch('/funcionarios', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/funcionarios/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  desativar: (id) => apiFetch(`/funcionarios/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Pedidos / PDV
+// ============================================================
+export const pedidosApi = {
+  listar: (params = {}) => apiFetch('/pedidos?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/pedidos/${id}`),
+  criar: (dados) => apiFetch('/pedidos', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizarStatus: (id, status) => apiFetch(`/pedidos/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  cancelar: (id) => apiFetch(`/pedidos/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Estoque (insumos + movimentações)
+// ============================================================
+export const estoqueApi = {
+  listar: (params = {}) => apiFetch('/estoque?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/estoque/${id}`),
+  criar: (dados) => apiFetch('/estoque', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/estoque/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  remover: (id) => apiFetch(`/estoque/${id}`, { method: 'DELETE' }),
+  movimentacoes: (id, params = {}) => apiFetch(`/estoque/${id}/movimentacoes?` + new URLSearchParams(params)),
+  registrarMovimentacao: (id, dados) => apiFetch(`/estoque/${id}/movimentacoes`, { method: 'POST', body: JSON.stringify(dados) }),
+};
+
+// ============================================================
+// Compras
+// ============================================================
+export const comprasApi = {
+  listar: (params = {}) => apiFetch('/compras?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/compras/${id}`),
+  criar: (dados) => apiFetch('/compras', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizarStatus: (id, status) => apiFetch(`/compras/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  cancelar: (id) => apiFetch(`/compras/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Financeiro (lançamentos + DRE)
+// ============================================================
+export const financeiroApi = {
+  listar: (params = {}) => apiFetch('/financeiro?' + new URLSearchParams(params)),
+  buscar: (id) => apiFetch(`/financeiro/${id}`),
+  criar: (dados) => apiFetch('/financeiro', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/financeiro/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  excluir: (id) => apiFetch(`/financeiro/${id}`, { method: 'DELETE' }),
+  dre: (data_inicio, data_fim) => apiFetch(`/financeiro/dre?data_inicio=${data_inicio}&data_fim=${data_fim}`),
+};
+
+// ============================================================
+// Dashboard
+// ============================================================
+export const dashboardApi = {
+  kpis: () => apiFetch('/dashboard'),
+  resumoMes: () => apiFetch('/dashboard/resumo-mes'),
+};
+
+// ============================================================
+// Relatórios
+// ============================================================
+export const relatoriosApi = {
+  vendas: (params) => apiFetch('/relatorios/vendas?' + new URLSearchParams(params)),
+  produtos: (params) => apiFetch('/relatorios/produtos?' + new URLSearchParams(params)),
+  clientes: (params) => apiFetch('/relatorios/clientes?' + new URLSearchParams(params)),
+  financeiro: (params) => apiFetch('/relatorios/financeiro?' + new URLSearchParams(params)),
+  estoque: () => apiFetch('/relatorios/estoque'),
+  funcionarios: () => apiFetch('/relatorios/funcionarios'),
+};
+
+// ============================================================
 // Health check (verifica se o backend está disponível)
 // ============================================================
 export const checkBackend = async () => {
