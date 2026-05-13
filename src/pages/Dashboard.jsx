@@ -5,11 +5,10 @@ import {
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, BarChart, Bar
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useApp } from '../contexts/AppContext';
 import { useAppearance } from '../contexts/AppearanceContext';
-import { getSalesChartData } from '../data/mockData';
 import { format } from 'date-fns';
 
 const ORDER_STATUS_LABEL = {
@@ -49,7 +48,19 @@ export default function Dashboard() {
   const { getDashboardStats, orders, inventory, settings } = useApp();
   const { dashboardOrder } = useAppearance();
   const stats = useMemo(() => getDashboardStats(), [getDashboardStats]);
-  const chartData = useMemo(() => getSalesChartData(7), []);
+  const chartData = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dateStr = d.toDateString();
+      const dayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === dateStr && o.status !== 'cancelled');
+      return {
+        date: d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
+        sales: dayOrders.reduce((s, o) => s + o.total, 0),
+        orders: dayOrders.length,
+      };
+    });
+  }, [orders]);
 
   const recentOrders = orders.slice(0, 6);
   const lowStockItems = inventory.filter(i => i.quantity <= i.minQuantity).slice(0, 4);

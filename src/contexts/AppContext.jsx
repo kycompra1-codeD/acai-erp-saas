@@ -1,20 +1,33 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { getFreshMockData, getAdvancedBIStats } from '../data/mockData';
 import { eventBus, EVENTS } from '../services/eventBus';
 import { marketplaceService } from '../services/marketplaceService';
 import { automationService } from '../services/automationService';
+import {
+  produtosApi, clientesApi, pedidosApi, estoqueApi,
+  funcionariosApi, fornecedoresApi, financeiroApi,
+} from '../services/api';
+import {
+  mapProduto, mapProdutoToApi,
+  mapCliente, mapClienteToApi,
+  mapPedido, mapPedidoToApi,
+  mapInsumo, mapInsumoToApi,
+  mapFuncionario, mapFuncionarioToApi,
+  mapFornecedor, mapFornecedorToApi,
+  mapLancamento, mapLancamentoToApi,
+  toPtStatus,
+} from '../services/apiAdapter';
 
 const AppContext = createContext(null);
-
 const STORAGE_KEY = 'acai_system_data';
+
+function isAuthenticated() {
+  return !!localStorage.getItem('acai_access_token');
+}
 
 function cleanBranding(data) {
   if (!data) return data;
-  
-  // Transforma o objeto em string para um "deep replace" de nomes legados
   let str = JSON.stringify(data);
-  
-  // Lista de termos legados e seus substitutos
   const legacyTerms = [
     { old: /AçaíBom/g, new: 'Açaí ERP SaaS' },
     { old: /AcaìBom/g, new: 'Açaí ERP SaaS' },
@@ -22,137 +35,120 @@ function cleanBranding(data) {
     { old: /AcaìTop/g, new: 'Açaí ERP SaaS' },
     { old: /AçaíSystem/g, new: 'Açaí ERP SaaS' },
     { old: /acaibom\.com\.br/g, new: 'acaierpsaas.com.br' },
-    { old: /@acaibom/g, new: '@acaierp_saas' }
+    { old: /@acaibom/g, new: '@acaierp_saas' },
   ];
-
-  legacyTerms.forEach(term => {
-    str = str.replace(term.old, term.new);
-  });
-
+  legacyTerms.forEach(t => { str = str.replace(t.old, t.new); });
   return JSON.parse(str);
 }
 
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      return cleanBranding(data);
-    }
+    if (raw) return cleanBranding(JSON.parse(raw));
   } catch {}
   return null;
 }
 
 function saveToStorage(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
 }
 
 export function AppProvider({ children }) {
   const stored = loadFromStorage();
   const freshData = getFreshMockData();
 
+  const [apiSynced, setApiSynced] = useState(false);
+  const [apiLoading, setApiLoading] = useState(false);
+  const syncedRef = useRef(false);
+
   // --- MULTI-COMPANY STATE ---
-  const [companies, setCompanies] = useState(() => {
-    try { return stored?.companies ?? freshData.initialCompanies; }
-    catch { return freshData.initialCompanies; }
-  });
+  const [companies, setCompanies] = useState(() => stored?.companies ?? freshData.initialCompanies);
+  const [activeCompanyId, setActiveCompanyId] = useState(() => stored?.activeCompanyId ?? freshData.initialCompanies[0].id);
 
-  const [activeCompanyId, setActiveCompanyId] = useState(() => {
-    try { return stored?.activeCompanyId ?? freshData.initialCompanies[0].id; }
-    catch { return freshData.initialCompanies[0].id; }
-  });
-
-  // --- DATA STATES (ALL DATA) ---
-  const [allProducts, setAllProducts] = useState(() => {
-    try { return stored?.products ?? freshData.initialProducts; } 
-    catch { return freshData.initialProducts; }
-  });
-  const [allCustomers, setAllCustomers] = useState(() => {
-    try { return stored?.customers ?? freshData.initialCustomers; }
-    catch { return freshData.initialCustomers; }
-  });
-  const [allInventory, setAllInventory] = useState(() => {
-    try { return stored?.inventory ?? freshData.initialInventory; }
-    catch { return freshData.initialInventory; }
-  });
-  const [allOrders, setAllOrders] = useState(() => {
-    try { return stored?.orders ?? freshData.initialOrders; }
-    catch { return freshData.initialOrders; }
-  });
-  const [allSettings, setAllSettings] = useState(() => {
-    try { return { ...freshData.initialSettings, ...(stored?.settings ?? {}) }; }
-    catch { return freshData.initialSettings; }
-  });
-  const [allEmployees, setAllEmployees] = useState(() => {
-    try { return Array.isArray(stored?.employees) ? stored.employees : freshData.initialEmployees; }
-    catch { return freshData.initialEmployees; }
-  });
-  const [allSuppliers, setAllSuppliers] = useState(() => {
-    try { return Array.isArray(stored?.suppliers) ? stored.suppliers : freshData.initialSuppliers; }
-    catch { return freshData.initialSuppliers; }
-  });
-  const [allFinanceEntries, setAllFinanceEntries] = useState(() => {
-    try { return Array.isArray(stored?.financeEntries) ? stored.financeEntries : freshData.initialFinanceEntries; }
-    catch { return freshData.initialFinanceEntries; }
-  });
-  const [allConciliations, setAllConciliations] = useState(() => {
-    try { return Array.isArray(stored?.conciliations) ? stored.conciliations : []; }
-    catch { return []; }
-  });
-  const [allProposals, setAllProposals] = useState(() => {
-    try { return Array.isArray(stored?.proposals) ? stored.proposals : freshData.initialProposals; }
-    catch { return freshData.initialProposals; }
-  });
-  const [allAutomationRules, setAllAutomationRules] = useState(() => {
-    try { return Array.isArray(stored?.automationRules) ? stored.automationRules : freshData.initialAutomationRules; }
-    catch { return freshData.initialAutomationRules; }
-  });
-
-  // These remain global or scoped differently if needed, keeping them as is for now but linked to company
-  const [orderCounter, setOrderCounter] = useState(() => {
-    try { return stored?.orderCounter ?? freshData.initialOrders.length + 1; }
-    catch { return freshData.initialOrders.length + 1; }
-  });
-  const [activeExtensions, setActiveExtensions] = useState(() => {
-    try { return Array.isArray(stored?.activeExtensions) ? stored.activeExtensions : freshData.initialActiveExtensions; }
-    catch { return freshData.initialActiveExtensions; }
-  });
+  // --- DATA STATES ---
+  const [allProducts, setAllProducts] = useState(() => stored?.products ?? freshData.initialProducts);
+  const [allCustomers, setAllCustomers] = useState(() => stored?.customers ?? freshData.initialCustomers);
+  const [allInventory, setAllInventory] = useState(() => stored?.inventory ?? freshData.initialInventory);
+  const [allOrders, setAllOrders] = useState(() => stored?.orders ?? freshData.initialOrders);
+  const [allSettings, setAllSettings] = useState(() => ({ ...freshData.initialSettings, ...(stored?.settings ?? {}) }));
+  const [allEmployees, setAllEmployees] = useState(() => Array.isArray(stored?.employees) ? stored.employees : freshData.initialEmployees);
+  const [allSuppliers, setAllSuppliers] = useState(() => Array.isArray(stored?.suppliers) ? stored.suppliers : freshData.initialSuppliers);
+  const [allFinanceEntries, setAllFinanceEntries] = useState(() => Array.isArray(stored?.financeEntries) ? stored.financeEntries : freshData.initialFinanceEntries);
+  const [allConciliations, setAllConciliations] = useState(() => Array.isArray(stored?.conciliations) ? stored.conciliations : []);
+  const [allProposals, setAllProposals] = useState(() => Array.isArray(stored?.proposals) ? stored.proposals : freshData.initialProposals);
+  const [allAutomationRules, setAllAutomationRules] = useState(() => Array.isArray(stored?.automationRules) ? stored.automationRules : freshData.initialAutomationRules);
+  const [orderCounter, setOrderCounter] = useState(() => stored?.orderCounter ?? freshData.initialOrders.length + 1);
+  const [activeExtensions, setActiveExtensions] = useState(() => Array.isArray(stored?.activeExtensions) ? stored.activeExtensions : freshData.initialActiveExtensions);
   const [allCashiers, setAllCashiers] = useState(() => {
-    try { 
-      if (stored?.allCashiers) return stored.allCashiers;
-      // Initialize with default for current companies
-      const initial = {};
-      freshData.initialCompanies.forEach(c => {
-        initial[c.id] = freshData.initialCashier;
-      });
-      return initial;
-    }
-    catch { 
-      const initial = {};
-      freshData.initialCompanies.forEach(c => {
-        initial[c.id] = freshData.initialCashier;
-      });
-      return initial;
-    }
+    if (stored?.allCashiers) return stored.allCashiers;
+    const init = {};
+    freshData.initialCompanies.forEach(c => { init[c.id] = freshData.initialCashier; });
+    return init;
   });
 
   const cashier = allCashiers[activeCompanyId] || freshData.initialCashier;
 
-  // --- DATA MIGRATION (Ensure all records have companyId) ---
+  // ── CARREGAR DA API ────────────────────────────────────────
   useEffect(() => {
-    let changed = false;
-    const defaultId = companies[0]?.id || 'comp-1';
+    if (!isAuthenticated() || syncedRef.current) return;
+    syncedRef.current = true;
 
+    const compId = activeCompanyId;
+
+    async function loadAll() {
+      setApiLoading(true);
+      try {
+        const [prods, clients, peds, stock, funcs, forn, fin] = await Promise.allSettled([
+          produtosApi.listar(),
+          clientesApi.listar(),
+          pedidosApi.listar({ limit: 200 }),
+          estoqueApi.listar(),
+          funcionariosApi.listar(),
+          fornecedoresApi.listar(),
+          financeiroApi.listar({ limit: 500 }),
+        ]);
+
+        if (prods.status === 'fulfilled' && prods.value?.dados) {
+          setAllProducts(prods.value.dados.map(p => mapProduto(p, compId)));
+        }
+        if (clients.status === 'fulfilled' && clients.value?.dados) {
+          setAllCustomers(clients.value.dados.map(c => mapCliente(c, compId)));
+        }
+        if (peds.status === 'fulfilled' && peds.value?.dados) {
+          setAllOrders(peds.value.dados.map(p => mapPedido(p, compId)));
+        }
+        if (stock.status === 'fulfilled' && stock.value?.dados) {
+          setAllInventory(stock.value.dados.map(i => mapInsumo(i, compId)));
+        }
+        if (funcs.status === 'fulfilled' && funcs.value?.dados) {
+          setAllEmployees(funcs.value.dados.map(f => mapFuncionario(f, compId)));
+        }
+        if (forn.status === 'fulfilled' && forn.value?.dados) {
+          setAllSuppliers(forn.value.dados.map(f => mapFornecedor(f, compId)));
+        }
+        if (fin.status === 'fulfilled' && fin.value?.dados) {
+          setAllFinanceEntries(fin.value.dados.map(l => mapLancamento(l, compId)));
+        }
+
+        setApiSynced(true);
+      } catch (err) {
+        console.warn('API load failed, using local data:', err.message);
+      } finally {
+        setApiLoading(false);
+      }
+    }
+
+    loadAll();
+  }, [activeCompanyId]);
+
+  // --- DATA MIGRATION ---
+  useEffect(() => {
+    const defaultId = companies[0]?.id || 'comp-1';
     const migrate = (list, setter) => {
-      const needsMigration = list.some(item => !item.companyId);
-      if (needsMigration) {
+      if (list.some(item => !item.companyId)) {
         setter(prev => prev.map(item => item.companyId ? item : { ...item, companyId: defaultId }));
-        changed = true;
       }
     };
-
     migrate(allProducts, setAllProducts);
     migrate(allCustomers, setAllCustomers);
     migrate(allInventory, setAllInventory);
@@ -162,13 +158,9 @@ export function AppProvider({ children }) {
     migrate(allSuppliers, setAllSuppliers);
     migrate(allProposals, setAllProposals);
     migrate(allAutomationRules, setAllAutomationRules);
+  }, [companies]);
 
-    if (changed) {
-      console.log('Dados migrados para compatibilidade multi-empresa.');
-    }
-  }, [companies, allProducts, allCustomers, allInventory, allOrders, allFinanceEntries, allEmployees, allSuppliers, allProposals, allAutomationRules]);
-
-  // --- FILTERED DATA (EXPOSED TO COMPONENTS) ---
+  // --- FILTERED DATA ---
   const products = allProducts.filter(p => p.companyId === activeCompanyId);
   const customers = allCustomers.filter(c => c.companyId === activeCompanyId);
   const inventory = allInventory.filter(i => i.companyId === activeCompanyId);
@@ -200,48 +192,38 @@ export function AppProvider({ children }) {
     setActiveExtensions(fresh.initialActiveExtensions);
     setAllAutomationRules(fresh.initialAutomationRules);
     setAllCashiers({ [fresh.initialCompanies[0].id]: fresh.initialCashier });
+    syncedRef.current = false;
+    setApiSynced(false);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   // Persist
   useEffect(() => {
-    saveToStorage({ 
+    saveToStorage({
       companies, activeCompanyId,
-      products: allProducts, customers: allCustomers, inventory: allInventory, 
-      orders: allOrders, settings: allSettings, 
-      orderCounter, employees: allEmployees, suppliers: allSuppliers, 
+      products: allProducts, customers: allCustomers, inventory: allInventory,
+      orders: allOrders, settings: allSettings,
+      orderCounter, employees: allEmployees, suppliers: allSuppliers,
       financeEntries: allFinanceEntries, conciliations: allConciliations,
-      proposals: allProposals, activeExtensions, automationRules: allAutomationRules, allCashiers
+      proposals: allProposals, activeExtensions, automationRules: allAutomationRules, allCashiers,
     });
   }, [companies, activeCompanyId, allProducts, allCustomers, allInventory, allOrders, allSettings, orderCounter, allEmployees, allSuppliers, allFinanceEntries, allConciliations, allProposals, activeExtensions, allAutomationRules, allCashiers]);
 
-  // 🆕 Inicializa o Motor de Automação (apenas para a empresa ativa)
   useEffect(() => {
-    automationService.init(automationRules, {
-      inventory,
-      customers,
-      orders,
-      settings
-    });
+    automationService.init(automationRules, { inventory, customers, orders, settings });
   }, [automationRules, inventory, customers, orders, settings]);
 
-  // --- ACTIONS WITH SCOPE ---
+  // --- ACTIONS ---
 
   const switchCompany = useCallback((id) => {
-    if (companies.some(c => c.id === id)) {
-      setActiveCompanyId(id);
-    }
+    if (companies.some(c => c.id === id)) setActiveCompanyId(id);
   }, [companies]);
 
   const addCompany = useCallback((companyData) => {
     const newId = `comp-${Date.now()}`;
     const newCompany = { ...companyData, id: newId };
     setCompanies(prev => [...prev, newCompany]);
-    // Initialize settings for new company
-    setAllSettings(prev => ({
-      ...prev,
-      [newId]: { ...freshData.initialSettings['comp-1'] }
-    }));
+    setAllSettings(prev => ({ ...prev, [newId]: { ...freshData.initialSettings['comp-1'] } }));
     return newCompany;
   }, [freshData.initialSettings]);
 
@@ -249,37 +231,87 @@ export function AppProvider({ children }) {
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   }, []);
 
-  // ---- PRODUTOS ----
-  const addProduct = useCallback((product) => {
-    const newProduct = { ...product, id: `p${Date.now()}`, companyId: activeCompanyId };
-    setAllProducts(prev => [...prev, newProduct]);
+  // ── PRODUTOS ──────────────────────────────────────────────
+  const addProduct = useCallback(async (product) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await produtosApi.criar(mapProdutoToApi({ ...product, categoryId: product.categoryId || null }));
+        if (res?.dados) {
+          const mapped = mapProduto(res.dados, activeCompanyId);
+          setAllProducts(prev => [...prev, mapped]);
+          return mapped;
+        }
+      } catch (err) { console.error('addProduct API:', err.message); }
+    }
+    const newP = { ...product, id: `p${Date.now()}`, companyId: activeCompanyId };
+    setAllProducts(prev => [...prev, newP]);
+    return newP;
   }, [activeCompanyId]);
 
-  const updateProduct = useCallback((id, updates) => {
-    let productToSync = null;
+  const updateProduct = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await produtosApi.editar(id, mapProdutoToApi(updates));
+        if (res?.dados) {
+          const mapped = mapProduto(res.dados, activeCompanyId);
+          setAllProducts(prev => prev.map(p => p.id === id ? mapped : p));
+          if (mapped.mappings) marketplaceService.syncInventory(mapped);
+          return;
+        }
+      } catch (err) { console.error('updateProduct API:', err.message); }
+    }
     setAllProducts(prev => {
       const updated = prev.map(p => p.id === id ? { ...p, ...updates } : p);
-      productToSync = updated.find(p => p.id === id);
+      const p = updated.find(x => x.id === id);
+      if (p?.mappings) marketplaceService.syncInventory(p);
       return updated;
     });
+  }, [activeCompanyId]);
 
-    if (productToSync && (updates.stock !== undefined || updates.price !== undefined || updates.mappings)) {
-      marketplaceService.syncInventory(productToSync);
+  const deleteProduct = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      try { await produtosApi.desativar(id); } catch (err) { console.error('deleteProduct API:', err.message); }
     }
-  }, []);
-
-  const deleteProduct = useCallback((id) => {
     setAllProducts(prev => prev.filter(p => p.id !== id));
   }, []);
 
-  // ---- PEDIDOS ----
-  const addOrder = useCallback((orderData) => {
-    if (!orderData || !orderData.items) {
-      console.error('AddOrder: Dados inválidos');
-      return null;
+  // ── PEDIDOS ───────────────────────────────────────────────
+  const addOrder = useCallback(async (orderData) => {
+    if (!orderData?.items) { console.error('addOrder: dados inválidos'); return null; }
+
+    let newOrder;
+
+    if (isAuthenticated()) {
+      try {
+        const res = await pedidosApi.criar(mapPedidoToApi(orderData));
+        if (res?.dados) {
+          newOrder = mapPedido(res.dados, activeCompanyId);
+          setAllOrders(prev => [newOrder, ...prev]);
+          setOrderCounter(prev => prev + 1);
+
+          // Atualizar caixa local
+          setAllCashiers(prev => {
+            const current = prev[activeCompanyId] || freshData.initialCashier;
+            if (!current.isOpen) return prev;
+            return {
+              ...prev,
+              [activeCompanyId]: {
+                ...current,
+                salesCount: current.salesCount + 1,
+                currentBalance: orderData.payment === 'dinheiro' ? current.currentBalance + orderData.total : current.currentBalance,
+              },
+            };
+          });
+
+          eventBus.emit(EVENTS.SALE_CREATED, { order: newOrder });
+          eventBus.emit(EVENTS.KITCHEN_REFRESH, { orderId: newOrder.id });
+          return newOrder;
+        }
+      } catch (err) { console.error('addOrder API:', err.message); }
     }
 
-    const newOrder = {
+    // Fallback local
+    newOrder = {
       ...orderData,
       id: `ord-${String(orderCounter).padStart(4, '0')}`,
       companyId: activeCompanyId,
@@ -289,48 +321,32 @@ export function AppProvider({ children }) {
     };
     setAllOrders(prev => [newOrder, ...prev]);
     setOrderCounter(prev => prev + 1);
-
-    // 🆕 Atualiza caixa (se aberto para esta empresa)
     setAllCashiers(prev => {
       const current = prev[activeCompanyId] || freshData.initialCashier;
       if (!current.isOpen) return prev;
-      let newBalance = current.currentBalance;
-      if (orderData.payment === 'dinheiro') {
-        newBalance += orderData.total;
-      }
       return {
         ...prev,
         [activeCompanyId]: {
           ...current,
           salesCount: current.salesCount + 1,
-          currentBalance: newBalance
-        }
+          currentBalance: orderData.payment === 'dinheiro' ? current.currentBalance + orderData.total : current.currentBalance,
+        },
       };
     });
 
-    // Atualiza pontos e total do cliente
     if (orderData.customerId) {
       setAllCustomers(prev => prev.map(c => {
         if (c.id === orderData.customerId) {
-          const points = Math.floor(orderData.total / (settings.pointsRate || 10));
-          return {
-            ...c,
-            points: c.points + points,
-            totalSpent: parseFloat((c.totalSpent + orderData.total).toFixed(2)),
-            ordersCount: c.ordersCount + 1,
-          };
+          const pts = Math.floor(orderData.total / (settings.pointsRate || 10));
+          return { ...c, points: c.points + pts, totalSpent: parseFloat((c.totalSpent + orderData.total).toFixed(2)), ordersCount: c.ordersCount + 1 };
         }
         return c;
       }));
     }
-
-    if (orderData.items?.length > 0) {
-      deductInventoryOnSale(orderData.items);
-    }
+    if (orderData.items?.length > 0) deductInventoryOnSale(orderData.items);
 
     eventBus.emit(EVENTS.SALE_CREATED, { order: newOrder });
     eventBus.emit(EVENTS.KITCHEN_REFRESH, { orderId: newOrder.id });
-
     return newOrder;
   }, [orderCounter, settings.pointsRate, activeCompanyId]);
 
@@ -345,50 +361,38 @@ export function AppProvider({ children }) {
           else if (item.name?.includes('700')) kg = 0.700;
           else if (item.name?.includes('1L') || item.name?.includes('1000')) kg = 1.000;
           if (item.weightKg) kg = parseFloat(item.weightKg);
-
           const polpaIdx = updated.findIndex(i => i.id === 'i1' && i.companyId === activeCompanyId);
           if (polpaIdx !== -1) {
-            const deduct = kg * item.quantity;
-            updated[polpaIdx] = {
-              ...updated[polpaIdx],
-              quantity: Math.max(0, parseFloat((updated[polpaIdx].quantity - deduct).toFixed(3))),
-              lastUpdate: new Date().toISOString(),
-            };
+            updated[polpaIdx] = { ...updated[polpaIdx], quantity: Math.max(0, parseFloat((updated[polpaIdx].quantity - kg * item.quantity).toFixed(3))), lastUpdate: new Date().toISOString() };
           }
         }
-
         const compMap = { 'Granola': 'i2', 'Mel': 'i4', 'Morango': 'i5', 'Banana': 'i6', 'Nutella': 'i7', 'Coco Ralado': 'i8' };
         const stockId = compMap[item.name];
         if (stockId) {
           const idx = updated.findIndex(i => i.id === stockId && i.companyId === activeCompanyId);
           if (idx !== -1) {
-            updated[idx] = {
-              ...updated[idx],
-              quantity: Math.max(0, parseFloat((updated[idx].quantity - 0.015 * item.quantity).toFixed(3))),
-              lastUpdate: new Date().toISOString(),
-            };
+            updated[idx] = { ...updated[idx], quantity: Math.max(0, parseFloat((updated[idx].quantity - 0.015 * item.quantity).toFixed(3))), lastUpdate: new Date().toISOString() };
           }
         }
       });
       eventBus.emit(EVENTS.STOCK_UPDATED, { items });
       return updated;
     });
-
     items.forEach(item => {
       const product = allProducts.find(p => (p.id === item.productId || p.name === item.name) && p.companyId === activeCompanyId);
-      if (product && product.mappings) {
-        marketplaceService.syncInventory({ ...product, stock: product.stock - (item.quantity || 1) });
-      }
+      if (product?.mappings) marketplaceService.syncInventory({ ...product, stock: product.stock - (item.quantity || 1) });
     });
   }, [allProducts, activeCompanyId]);
 
-  const updateOrderStatus = useCallback((id, status) => {
+  const updateOrderStatus = useCallback(async (id, status) => {
+    if (isAuthenticated()) {
+      try { await pedidosApi.atualizarStatus(id, toPtStatus(status)); } catch (err) { console.error('updateOrderStatus API:', err.message); }
+    }
     const now = new Date().toISOString();
     const tsMap = { preparing: 'preparingAt', ready: 'readyAt', delivered: 'deliveredAt', cancelled: 'cancelledAt' };
     setAllOrders(prev => prev.map(o => {
       if (o.id !== id) return o;
-      const extra = tsMap[status] ? { [tsMap[status]]: now } : {};
-      return { ...o, status, ...extra };
+      return { ...o, status, ...(tsMap[status] ? { [tsMap[status]]: now } : {}) };
     }));
   }, []);
 
@@ -396,100 +400,169 @@ export function AppProvider({ children }) {
     setAllOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
   }, []);
 
-  // ---- CLIENTES ----
-  const addCustomer = useCallback((customer) => {
-    const newCustomer = {
-      ...customer,
-      id: `c${Date.now()}`,
-      companyId: activeCompanyId,
-      points: 0,
-      totalSpent: 0,
-      ordersCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-    setAllCustomers(prev => [...prev, newCustomer]);
-    return newCustomer;
+  // ── CLIENTES ──────────────────────────────────────────────
+  const addCustomer = useCallback(async (customer) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await clientesApi.criar(mapClienteToApi(customer));
+        if (res?.dados) {
+          const mapped = mapCliente(res.dados, activeCompanyId);
+          setAllCustomers(prev => [...prev, mapped]);
+          return mapped;
+        }
+      } catch (err) { console.error('addCustomer API:', err.message); }
+    }
+    const newC = { ...customer, id: `c${Date.now()}`, companyId: activeCompanyId, points: 0, totalSpent: 0, ordersCount: 0, createdAt: new Date().toISOString() };
+    setAllCustomers(prev => [...prev, newC]);
+    return newC;
   }, [activeCompanyId]);
 
-  const updateCustomer = useCallback((id, updates) => {
+  const updateCustomer = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try { await clientesApi.editar(id, mapClienteToApi(updates)); } catch (err) { console.error('updateCustomer API:', err.message); }
+    }
     setAllCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   }, []);
 
-  const deleteCustomer = useCallback((id) => {
+  const deleteCustomer = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      try { await clientesApi.desativar(id); } catch (err) { console.error('deleteCustomer API:', err.message); }
+    }
     setAllCustomers(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  // ---- ESTOQUE ----
-  const updateInventoryItem = useCallback((id, updates) => {
-    setAllInventory(prev => prev.map(i =>
-      i.id === id ? { ...i, ...updates, lastUpdate: new Date().toISOString() } : i
-    ));
+  // ── ESTOQUE ───────────────────────────────────────────────
+  const updateInventoryItem = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try { await estoqueApi.editar(id, mapInsumoToApi(updates)); } catch (err) { console.error('updateInventory API:', err.message); }
+    }
+    setAllInventory(prev => prev.map(i => i.id === id ? { ...i, ...updates, lastUpdate: new Date().toISOString() } : i));
   }, []);
 
-  const addInventoryItem = useCallback((item) => {
-    setAllInventory(prev => [...prev, { ...item, id: `i${Date.now()}`, companyId: activeCompanyId, lastUpdate: new Date().toISOString() }]);
+  const addInventoryItem = useCallback(async (item) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await estoqueApi.criar(mapInsumoToApi(item));
+        if (res?.dados) {
+          const mapped = mapInsumo(res.dados, activeCompanyId);
+          setAllInventory(prev => [...prev, mapped]);
+          return mapped;
+        }
+      } catch (err) { console.error('addInventory API:', err.message); }
+    }
+    const newI = { ...item, id: `i${Date.now()}`, companyId: activeCompanyId, lastUpdate: new Date().toISOString() };
+    setAllInventory(prev => [...prev, newI]);
+    return newI;
   }, [activeCompanyId]);
 
-  const addInventoryStock = useCallback((id, qty) => {
-    setAllInventory(prev => prev.map(i =>
-      i.id === id ? { ...i, quantity: i.quantity + qty, lastUpdate: new Date().toISOString() } : i
-    ));
+  const addInventoryStock = useCallback(async (id, qty, motivo = 'Ajuste manual') => {
+    if (isAuthenticated()) {
+      try {
+        await estoqueApi.registrarMovimentacao(id, { tipo: 'entrada', quantidade: qty, motivo });
+      } catch (err) { console.error('addInventoryStock API:', err.message); }
+    }
+    setAllInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: i.quantity + qty, lastUpdate: new Date().toISOString() } : i));
   }, []);
 
-  // ---- SETTINGS ----
+  // ── SETTINGS ──────────────────────────────────────────────
   const updateSettings = useCallback((updates) => {
-    setAllSettings(prev => ({
-      ...prev,
-      [activeCompanyId]: { ...(prev[activeCompanyId] || {}), ...updates }
-    }));
+    setAllSettings(prev => ({ ...prev, [activeCompanyId]: { ...(prev[activeCompanyId] || {}), ...updates } }));
   }, [activeCompanyId]);
 
-  // ---- FUNCIONÁRIOS ----
-  const addEmployee = useCallback((emp) => {
-    const newEmp = { ...emp, id: `e${Date.now()}`, companyId: activeCompanyId, hiredAt: emp.hiredAt || new Date().toISOString() };
-    setAllEmployees(prev => [...prev, newEmp]);
-    return newEmp;
+  // ── FUNCIONÁRIOS ──────────────────────────────────────────
+  const addEmployee = useCallback(async (emp) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await funcionariosApi.criar(mapFuncionarioToApi(emp));
+        if (res?.dados) {
+          const mapped = mapFuncionario(res.dados, activeCompanyId);
+          setAllEmployees(prev => [...prev, mapped]);
+          return mapped;
+        }
+      } catch (err) { console.error('addEmployee API:', err.message); }
+    }
+    const newE = { ...emp, id: `e${Date.now()}`, companyId: activeCompanyId, hiredAt: emp.hiredAt || new Date().toISOString() };
+    setAllEmployees(prev => [...prev, newE]);
+    return newE;
   }, [activeCompanyId]);
 
-  const updateEmployee = useCallback((id, updates) => {
+  const updateEmployee = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try { await funcionariosApi.editar(id, mapFuncionarioToApi(updates)); } catch (err) { console.error('updateEmployee API:', err.message); }
+    }
     setAllEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, []);
 
-  const deleteEmployee = useCallback((id) => {
+  const deleteEmployee = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      try { await funcionariosApi.desativar(id); } catch (err) { console.error('deleteEmployee API:', err.message); }
+    }
     setAllEmployees(prev => prev.filter(e => e.id !== id));
   }, []);
 
-  // ---- FORNECEDORES ----
-  const addSupplier = useCallback((sup) => {
-    const newSup = { ...sup, id: `s${Date.now()}`, companyId: activeCompanyId, lastOrder: null };
-    setAllSuppliers(prev => [...prev, newSup]);
-    return newSup;
+  // ── FORNECEDORES ──────────────────────────────────────────
+  const addSupplier = useCallback(async (sup) => {
+    if (isAuthenticated()) {
+      try {
+        const res = await fornecedoresApi.criar(mapFornecedorToApi(sup));
+        if (res?.dados) {
+          const mapped = mapFornecedor(res.dados, activeCompanyId);
+          setAllSuppliers(prev => [...prev, mapped]);
+          return mapped;
+        }
+      } catch (err) { console.error('addSupplier API:', err.message); }
+    }
+    const newS = { ...sup, id: `s${Date.now()}`, companyId: activeCompanyId, lastOrder: null };
+    setAllSuppliers(prev => [...prev, newS]);
+    return newS;
   }, [activeCompanyId]);
 
-  const updateSupplier = useCallback((id, updates) => {
+  const updateSupplier = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try { await fornecedoresApi.editar(id, mapFornecedorToApi(updates)); } catch (err) { console.error('updateSupplier API:', err.message); }
+    }
     setAllSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
 
-  const deleteSupplier = useCallback((id) => {
+  const deleteSupplier = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      try { await fornecedoresApi.desativar(id); } catch (err) { console.error('deleteSupplier API:', err.message); }
+    }
     setAllSuppliers(prev => prev.filter(s => s.id !== id));
   }, []);
 
-  // ---- FINANCEIRO ----
-  const addFinanceEntry = useCallback((entry) => {
-    const newEntry = { ...entry, id: `f${Date.now()}`, companyId: activeCompanyId, date: entry.date || new Date().toISOString() };
-    setAllFinanceEntries(prev => [newEntry, ...prev]);
-    return newEntry;
+  // ── FINANCEIRO ────────────────────────────────────────────
+  const addFinanceEntry = useCallback(async (entry) => {
+    if (isAuthenticated() && !entry.pedidoId) {
+      try {
+        const res = await financeiroApi.criar(mapLancamentoToApi(entry));
+        if (res?.dados) {
+          const mapped = mapLancamento(res.dados, activeCompanyId);
+          setAllFinanceEntries(prev => [mapped, ...prev]);
+          return mapped;
+        }
+      } catch (err) { console.error('addFinanceEntry API:', err.message); }
+    }
+    const newF = { ...entry, id: `f${Date.now()}`, companyId: activeCompanyId, date: entry.date || new Date().toISOString() };
+    setAllFinanceEntries(prev => [newF, ...prev]);
+    return newF;
   }, [activeCompanyId]);
 
-  const updateFinanceEntry = useCallback((id, updates) => {
+  const updateFinanceEntry = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      try { await financeiroApi.editar(id, mapLancamentoToApi(updates)); } catch (err) { console.error('updateFinance API:', err.message); }
+    }
     setAllFinanceEntries(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
   }, []);
 
-  const deleteFinanceEntry = useCallback((id) => {
+  const deleteFinanceEntry = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      try { await financeiroApi.excluir(id); } catch (err) { console.error('deleteFinance API:', err.message); }
+    }
     setAllFinanceEntries(prev => prev.filter(f => f.id !== id));
   }, []);
 
-  // ---- CONCILIAÇÃO ----
+  // ── CONCILIAÇÃO / ORÇAMENTOS / EXTENSÕES / AUTOMAÇÕES ─────
   const addConciliation = useCallback((item) => {
     setAllConciliations(prev => [{ ...item, id: `con-${Date.now()}`, companyId: activeCompanyId }, ...prev]);
   }, [activeCompanyId]);
@@ -498,16 +571,8 @@ export function AppProvider({ children }) {
     setAllConciliations(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   }, []);
 
-  // ---- ORÇAMENTOS ----
   const addProposal = useCallback((prop) => {
-    const newProp = { 
-      ...prop, 
-      id: `prop-${Date.now()}`, 
-      companyId: activeCompanyId,
-      number: proposals.length + 1, 
-      date: new Date().toISOString(),
-      status: 'pending'
-    };
+    const newProp = { ...prop, id: `prop-${Date.now()}`, companyId: activeCompanyId, number: proposals.length + 1, date: new Date().toISOString(), status: 'pending' };
     setAllProposals(prev => [newProp, ...prev]);
     return newProp;
   }, [proposals.length, activeCompanyId]);
@@ -519,28 +584,15 @@ export function AppProvider({ children }) {
   const convertProposalToOrder = useCallback((proposalId) => {
     const proposal = allProposals.find(p => p.id === proposalId);
     if (!proposal) return null;
-    const orderData = {
-      customerId: proposal.customerId,
-      customerName: proposal.customerName,
-      items: proposal.items,
-      total: proposal.total,
-      type: 'balcão',
-      payment: 'pendente',
-      notes: `Convertido do Orçamento #${proposal.number}. ${proposal.notes || ''}`,
-    };
-    const newOrder = addOrder(orderData);
+    const newOrder = addOrder({ customerId: proposal.customerId, customerName: proposal.customerName, items: proposal.items, total: proposal.total, type: 'balcão', payment: 'pendente', notes: `Orçamento #${proposal.number}. ${proposal.notes || ''}` });
     updateProposalStatus(proposalId, 'approved');
     return newOrder;
   }, [allProposals, addOrder, updateProposalStatus]);
 
-  // ---- EXTENSÕES ----
   const toggleExtension = useCallback((id) => {
-    setActiveExtensions(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setActiveExtensions(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }, []);
 
-  // ---- AUTOMAÇÕES ----
   const addAutomationRule = useCallback((rule) => {
     setAllAutomationRules(prev => [{ ...rule, id: `rule-${Date.now()}`, companyId: activeCompanyId }, ...prev]);
   }, [activeCompanyId]);
@@ -553,20 +605,11 @@ export function AppProvider({ children }) {
     setAllAutomationRules(prev => prev.filter(r => r.id !== id));
   }, []);
 
-  // ---- CAIXA ----
+  // ── CAIXA ─────────────────────────────────────────────────
   const openCashier = useCallback((initialBalance, operatorName) => {
     setAllCashiers(prev => ({
       ...prev,
-      [activeCompanyId]: {
-        isOpen: true,
-        openedAt: new Date().toISOString(),
-        closedAt: null,
-        initialBalance: parseFloat(initialBalance),
-        currentBalance: parseFloat(initialBalance),
-        operatorName: operatorName,
-        salesCount: 0,
-        history: prev[activeCompanyId]?.history || []
-      }
+      [activeCompanyId]: { isOpen: true, openedAt: new Date().toISOString(), closedAt: null, initialBalance: parseFloat(initialBalance), currentBalance: parseFloat(initialBalance), operatorName, salesCount: 0, history: prev[activeCompanyId]?.history || [] },
     }));
   }, [activeCompanyId]);
 
@@ -574,92 +617,70 @@ export function AppProvider({ children }) {
     let closedSession = null;
     setAllCashiers(prev => {
       const current = prev[activeCompanyId];
-      if (!current || !current.isOpen) return prev;
-      closedSession = {
-        openedAt: current.openedAt,
-        closedAt: new Date().toISOString(),
-        initialBalance: current.initialBalance,
-        currentBalance: current.currentBalance,
-        operatorName: current.operatorName,
-        salesCount: current.salesCount,
-        reportedFinalBalance: parseFloat(finalBalance),
-        difference: parseFloat(finalBalance) - current.currentBalance,
-        notes: notes || ''
-      };
-      return {
-        ...prev,
-        [activeCompanyId]: {
-          isOpen: false,
-          openedAt: null,
-          closedAt: null,
-          initialBalance: 0,
-          currentBalance: 0,
-          operatorName: null,
-          salesCount: 0,
-          history: [closedSession, ...(current.history || [])].slice(0, 50)
-        }
-      };
+      if (!current?.isOpen) return prev;
+      closedSession = { openedAt: current.openedAt, closedAt: new Date().toISOString(), initialBalance: current.initialBalance, currentBalance: current.currentBalance, operatorName: current.operatorName, salesCount: current.salesCount, reportedFinalBalance: parseFloat(finalBalance), difference: parseFloat(finalBalance) - current.currentBalance, notes: notes || '' };
+      return { ...prev, [activeCompanyId]: { isOpen: false, openedAt: null, closedAt: null, initialBalance: 0, currentBalance: 0, operatorName: null, salesCount: 0, history: [closedSession, ...(current.history || [])].slice(0, 50) } };
     });
-
     if (closedSession) {
-      addFinanceEntry({
-        type: 'receita',
-        category: 'Vendas PDV',
-        description: `Fechamento de Caixa - ${closedSession.operatorName}`,
-        amount: closedSession.currentBalance - closedSession.initialBalance,
-        paymentMethod: 'misto',
-        status: 'pago',
-        recurring: false
-      });
+      addFinanceEntry({ type: 'receita', category: 'Vendas PDV', description: `Fechamento de Caixa - ${closedSession.operatorName}`, amount: closedSession.currentBalance - closedSession.initialBalance, paymentMethod: 'misto', status: 'pago', recurring: false });
       eventBus.emit('cashier:closed', closedSession);
     }
-  }, [addFinanceEntry]);
+  }, [addFinanceEntry, activeCompanyId]);
 
-  // ---- STATS ----
+  // ── STATS ─────────────────────────────────────────────────
   const getDashboardStats = useCallback(() => {
     const today = new Date().toDateString();
-    const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
+    const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today && o.status !== 'cancelled');
     const todaySales = todayOrders.reduce((s, o) => s + o.total, 0);
     const avgTicket = todayOrders.length ? todaySales / todayOrders.length : 0;
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yestOrders = orders.filter(o => new Date(o.createdAt).toDateString() === yesterday.toDateString());
-    const yestSales = yestOrders.reduce((s, o) => s + o.total, 0);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yestSales = orders.filter(o => new Date(o.createdAt).toDateString() === yesterday.toDateString()).reduce((s, o) => s + o.total, 0);
     const salesChange = yestSales ? ((todaySales - yestSales) / yestSales) * 100 : 0;
     const pendingOrders = orders.filter(o => ['pending', 'preparing'].includes(o.status));
     const lowStockItems = inventory.filter(i => i.quantity <= i.minQuantity);
     const productSales = {};
-    orders.forEach(o => {
-      o.items?.forEach(item => {
-        productSales[item.name] = (productSales[item.name] || 0) + item.quantity;
-      });
-    });
+    orders.forEach(o => { o.items?.forEach(item => { productSales[item.name] = (productSales[item.name] || 0) + item.quantity; }); });
     const topProducts = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, qty]) => ({ name, qty }));
-
     return { todaySales, todayOrders: todayOrders.length, avgTicket, salesChange, pendingOrders: pendingOrders.length, totalCustomers: customers.length, lowStockCount: lowStockItems.length, topProducts };
   }, [orders, inventory, customers]);
 
   const value = {
+    // state
+    apiSynced, apiLoading,
     companies, activeCompanyId, activeCompany,
     products, customers, inventory, orders, settings,
     employees, suppliers, financeEntries,
+    // company
     switchCompany, addCompany, updateCompany,
+    // produtos
     addProduct, updateProduct, deleteProduct,
-    addOrder, updateOrderStatus, updateOrder,
+    // pedidos
+    addOrder, updateOrderStatus, updateOrder, deductInventoryOnSale,
+    // clientes
     addCustomer, updateCustomer, deleteCustomer,
+    // estoque
     updateInventoryItem, addInventoryItem, addInventoryStock,
+    // settings
     updateSettings,
+    // funcionários
     addEmployee, updateEmployee, deleteEmployee,
+    // fornecedores
     addSupplier, updateSupplier, deleteSupplier,
+    // financeiro
     addFinanceEntry, updateFinanceEntry, deleteFinanceEntry,
+    // conciliação
     addConciliation, updateConciliation,
+    conciliations,
+    // orçamentos
     proposals, addProposal, updateProposalStatus, convertProposalToOrder,
+    // extensões
     activeExtensions, toggleExtension,
+    // automações
     automationRules, addAutomationRule, updateAutomationRule, deleteAutomationRule,
+    // caixa
     cashier, openCashier, closeCashier,
-    getDashboardStats,
-    getAdvancedBIStats,
-    deductInventoryOnSale,
+    // stats
+    getDashboardStats, getAdvancedBIStats,
     resetToDemoData,
   };
 
