@@ -364,8 +364,16 @@ img {
 
 .input-field::placeholder { color: var(--text-muted); }
 
+select.input-field,
 .input-field select {
   background: transparent;
+  color: var(--text);
+}
+
+select.input-field option,
+.input-field option,
+select option {
+  background-color: var(--bg-2);
   color: var(--text);
 }
 

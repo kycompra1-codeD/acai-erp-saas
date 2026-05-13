@@ -44,7 +44,7 @@ export default function Purchases() {
           <p className="page-subtitle">Gestão de estoque mínimo, fornecedores e ordens de compra</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={() => toast('Histórico em breve', { icon: '🚧' })}>
             <History size={16} /> Histórico de Compras
           </button>
           <button className="btn btn-primary" onClick={() => toast.success('Importação de XML iniciada...')}>
@@ -102,7 +102,7 @@ export default function Purchases() {
                       </div>
                     </div>
                   </div>
-                  <button className="btn btn-primary btn-sm">
+                  <button className="btn btn-primary btn-sm" onClick={() => toast('Preenchendo nova ordem de compra...')}>
                     <Plus size={14} /> Gerar O.C.
                   </button>
                 </div>
@@ -128,7 +128,7 @@ export default function Purchases() {
                       <div style={{ fontWeight: 800 }}>R$ {o.total.toFixed(2)}</div>
                       <div className={`badge ${o.status === 'approved' ? 'badge-success' : o.status === 'pending' ? 'badge-warning' : ''}`}>{o.status}</div>
                     </div>
-                    <button className="btn btn-ghost btn-icon"><ChevronRight size={18} /></button>
+                    <button className="btn btn-ghost btn-icon" onClick={() => toast('Detalhes da ordem em breve')}><ChevronRight size={18} /></button>
                   </div>
                 </div>
               ))}
@@ -147,7 +147,7 @@ export default function Purchases() {
                     <div>📍 {s.address || 'Endereço não cadastrado'}</div>
                     <div>📞 {s.phone || 'Sem telefone'}</div>
                   </div>
-                  <button className="btn btn-secondary btn-sm w-full">Ver Produtos Vinculados</button>
+                  <button className="btn btn-secondary btn-sm w-full" onClick={() => toast('Produtos vinculados (em breve)')}>Ver Produtos Vinculados</button>
                 </div>
               ))}
             </div>

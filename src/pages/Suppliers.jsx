@@ -95,7 +95,7 @@ export default function Suppliers() {
           <p className="page-subtitle">Gestão estratégica de compras e suprimentos</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary btn-sm">
+          <button className="btn btn-secondary btn-sm" onClick={() => toast('Exportar fornecedores (em breve)', { icon: '🚧' })}>
             <DownloadCloud size={16} /> Exportar
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}>
@@ -150,7 +150,7 @@ export default function Suppliers() {
             <option key={c} value={c}>{c === 'todas' ? 'Todas Categorias' : c}</option>
           ))}
         </select>
-        <button className="btn btn-secondary btn-icon"><Filter size={16} /></button>
+        <button className="btn btn-secondary btn-icon" onClick={() => toast('Filtros adicionais (em breve)', { icon: '🚧' })}><Filter size={16} /></button>
       </div>
 
       {/* Suppliers Table */}

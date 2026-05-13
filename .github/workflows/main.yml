@@ -1,4 +1,4 @@
-name: CI - Açaí ERP SaaS
+name: CI/CD - Açaí ERP SaaS
 
 on:
   push:
@@ -54,3 +54,33 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+    - name: Deploy na VPS Hostinger via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_SSH_PORT || 22 }}
+        script: |
+          set -e
+          cd /opt/acai-erp
+
+          echo "📥 Atualizando código..."
+          git pull origin main
+
+          echo "🐳 Subindo containers..."
+          docker compose --profile production up -d --build --remove-orphans
+
+          echo "🧹 Limpando imagens antigas..."
+          docker image prune -f
+
+          echo "✅ Deploy concluído em $(date '+%d/%m/%Y %H:%M:%S')"
+          docker compose ps

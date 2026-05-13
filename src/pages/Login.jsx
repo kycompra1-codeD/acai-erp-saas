@@ -1,22 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grape, Eye, EyeOff, Loader2, ChefHat, ShoppingCart, Shield } from 'lucide-react';
+import { Grape, Eye, EyeOff, Loader2, Shield, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { DEMO_USERS } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const ROLE_ICONS = {
-  admin:    { icon: Shield,       color: '#7c3aed', label: 'Administrador' },
-  caixa:    { icon: ShoppingCart, color: '#ec4899', label: 'Operador de Caixa' },
-  producao: { icon: ChefHat,      color: '#f59e0b', label: 'Produção' },
-};
-
 export default function Login() {
-  const [email, setEmail] = useState('admin@acaibom.com.br');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, backendOnline } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -26,13 +19,31 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    const ok = login(email, password);
-    if (ok) {
-      toast.success('Bem-vindo ao Açaí ERP SaaS! 🍇');
+    try {
+      const result = await login(email, password);
+      if (result?.sucesso) {
+        if (result?.demo) {
+          toast.success('Bem-vindo ao modo Demo! 🍇', { icon: '🎭' });
+        } else {
+          toast.success('Bem-vindo ao Açaí ERP! 🍇');
+        }
+        navigate('/');
+      } else {
+        toast.error(result?.mensagem || 'Email ou senha incorretos');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const entrarDemo = async () => {
+    setLoading(true);
+    const result = await login('admin@demo.com', 'demo');
+    if (result?.sucesso) {
+      toast.success('Modo demonstração ativado 🎭');
       navigate('/');
-    } else {
-      toast.error('Credenciais inválidas');
     }
     setLoading(false);
   };
@@ -73,8 +84,24 @@ export default function Login() {
         boxShadow: 'var(--shadow-lg)',
         position: 'relative', zIndex: 1,
       }}>
+        {/* Status do backend */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 10px',
+          borderRadius: 'var(--radius)',
+          background: backendOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+          border: `1px solid ${backendOnline ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          marginBottom: 24, fontSize: 11,
+          color: backendOnline ? '#10b981' : '#f59e0b',
+        }}>
+          {backendOnline
+            ? <><Wifi size={12} /> API Online — login real ativado</>
+            : <><WifiOff size={12} /> API Offline — use o modo Demo</>
+          }
+        </div>
+
         {/* Logo */}
-        <div className="flex flex-col items-center" style={{ marginBottom: 36 }}>
+        <div className="flex flex-col items-center" style={{ marginBottom: 32 }}>
           <div style={{
             width: 72, height: 72,
             background: 'linear-gradient(135deg, var(--primary), var(--accent))',
@@ -101,8 +128,9 @@ export default function Login() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@acaibom.com.br"
+              placeholder="seu@email.com.br"
               autoComplete="email"
+              autoFocus
             />
           </div>
 
@@ -143,49 +171,47 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Demo users */}
-        <div style={{ marginTop: 20 }}>
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-            💡 Acesso rápido (clique para preencher)
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {DEMO_USERS.map(u => {
-              const ri = ROLE_ICONS[u.role] || ROLE_ICONS.admin;
-              return (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => { setEmail(u.email); setPassword(u.password); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '8px 12px',
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'border-color 0.15s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = ri.color}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                >
-                  <div style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    background: `${ri.color}20`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    <ri.icon size={14} color={ri.color} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{u.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ri.label} · {u.email}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Separador */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          margin: '20px 0', color: 'var(--text-muted)', fontSize: 11,
+        }}>
+          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          ou
+          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         </div>
+
+        {/* Botão demo */}
+        <button
+          type="button"
+          onClick={entrarDemo}
+          disabled={loading}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '10px 16px',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            color: 'var(--text-muted)',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          <Shield size={14} />
+          Entrar no Modo Demo (sem cadastro)
+        </button>
+
+        <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 20 }}>
+          Não tem conta?{' '}
+          <span
+            style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
+            onClick={() => toast('Cadastro em breve! Por enquanto use o modo Demo.', { icon: '🚀' })}
+          >
+            Criar conta grátis
+          </span>
+        </p>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

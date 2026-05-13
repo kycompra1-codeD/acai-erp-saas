@@ -1,0 +1,21 @@
+# ============================================================
+# Docker Compose Override - Desenvolvimento Local
+# ============================================================
+# Este arquivo é carregado automaticamente pelo Docker Compose
+# em conjunto com docker-compose.yml apenas no ambiente de dev.
+# NÃO usar em produção (não faz parte do deploy na VPS).
+# ============================================================
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  frontend:
+    build:
+      args:
+        VITE_API_URL: http://localhost:3001/api

@@ -16,6 +16,7 @@ const navItems = [
     { to: '/kitchen', icon: ChefHat, label: 'Cozinha / Produção', section: 'kitchen' },
   ]},
   { group: 'ERP — Gestão', items: [
+    { to: '/sales', icon: ClipboardList, label: 'Gestão de Vendas', section: 'sales', isNew: true },
     { to: '/products', icon: Package, label: 'Produtos', section: 'products' },
     { to: '/inventory', icon: Archive, label: 'Estoque', section: 'inventory' },
     { to: '/customers', icon: Users, label: 'Clientes', section: 'customers' },

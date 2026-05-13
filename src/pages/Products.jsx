@@ -1,14 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Minus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, AlertTriangle, Tag, Eye, EyeOff, Package, Truck, FileText, Layout, Layers, Globe, Image as ImageIcon, Video, ShoppingBag, DollarSign, ClipboardList, BarChart2, Hash, Box, Link as LinkIcon, Info, Settings, ShieldCheck, Zap, Share2, ChevronRight, AlignLeft, AlignCenter, AlignRight, Activity, Paperclip, History, PlusCircle } from 'lucide-react';
+import { Plus, Minus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, AlertTriangle, Tag, Eye, EyeOff, Package, Truck, FileText, Layout, Layers, Globe, Image as ImageIcon, Video, ShoppingBag, DollarSign, ClipboardList, BarChart2, Hash, Box, Link as LinkIcon, Info, Settings, ShieldCheck, Zap, Share2, ChevronRight, AlignLeft, AlignCenter, AlignRight, Activity, Paperclip, History, PlusCircle, ScanLine, Printer } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import toast from 'react-hot-toast';
 import ProductBox3D from '../components/products/ProductBox3D';
-
+import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 const DEFAULT_CATEGORIES = [
-  { key: 'acai', label: 'Açaís', emoji: '🍇' },
-  { key: 'complemento', label: 'Complementos', emoji: '🌾' },
-  { key: 'bebida', label: 'Bebidas', emoji: '🥤' },
-  { key: 'sobremesa', label: 'Sobremesas', emoji: '🍩' },
+  { id: 'acai', label: 'Açaís', emoji: '🍇', image: null, parentId: null, order: 0 },
+  { id: 'complemento', label: 'Complementos', emoji: '🌾', image: null, parentId: null, order: 1 },
+  { id: 'bebida', label: 'Bebidas', emoji: '🥤', image: null, parentId: null, order: 2 },
+  { id: 'sobremesa', label: 'Sobremesas', emoji: '🍩', image: null, parentId: null, order: 3 },
 ];
 
 const CATEGORIES_STORAGE_KEY = 'acai_product_categories';
@@ -16,7 +17,7 @@ const CATEGORIES_STORAGE_KEY = 'acai_product_categories';
 function fmt(v) { return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`; }
 
 const EMPTY_PRODUCT = { 
-  name: '', category: 'acai', brand: '', condition: 'new', unit: 'pote', 
+  name: '', category: 'acai', subcategory: '', brand: '', condition: 'new', unit: 'pote', 
   identityType: 'emoji',
   emoji: '🍇', description: '', active: true,
   // Tipo do produto
@@ -200,12 +201,134 @@ function EmojiPicker({ value, onChange }) {
   );
 }
 
+function CategoryTreeNode({ node, level, onAdd, onEdit, onDelete, onMove, expandedNodes, toggleExpand, draggedId, setDraggedId, dragOverId, setDragOverId, dragPosition, setDragPosition }) {
+  const isExpanded = expandedNodes[node.id];
+  const hasChildren = node.children && node.children.length > 0;
+
+  const handleDragStart = (e) => {
+    e.stopPropagation();
+    setDraggedId(node.id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Remove drag image ghost if preferred, or leave default
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedId === node.id) return;
+
+    setDragOverId(node.id);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height;
+
+    // Se estiver no primeiro terço (acima), no último terço (abaixo), ou no meio (dentro)
+    if (y < h * 0.25) {
+      setDragPosition('before');
+    } else if (y > h * 0.75) {
+      setDragPosition('after');
+    } else {
+      setDragPosition('inside');
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedId && draggedId !== node.id) {
+      onMove(draggedId, node.id, dragPosition);
+    }
+    setDraggedId(null);
+    setDragOverId(null);
+    setDragPosition(null);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Do not clear immediately to avoid flickering
+  };
+
+  return (
+    <div className="w-full">
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragLeave={handleDragLeave}
+        className={`flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-black/20 group hover:bg-white/5 transition-all
+          ${dragOverId === node.id && dragPosition === 'before' ? 'border-t-primary' : ''}
+          ${dragOverId === node.id && dragPosition === 'after' ? 'border-b-primary' : ''}
+          ${dragOverId === node.id && dragPosition === 'inside' ? 'bg-primary/20 border-primary/50' : ''}
+          ${draggedId === node.id ? 'opacity-50' : ''}
+        `}
+      >
+        <div className="flex-1 flex items-center gap-3">
+          {hasChildren ? (
+            <button type="button" onClick={() => toggleExpand(node.id)} className="w-6 h-6 flex items-center justify-center bg-white/5 rounded-lg text-muted hover:text-white">
+              {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+            </button>
+          ) : <div className="w-6" />}
+          
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl overflow-hidden">
+            {node.image ? <img src={node.image} alt="" className="w-full h-full object-cover" /> : node.emoji}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-white font-medium text-sm">{node.label}</span>
+            <span className="text-muted text-[10px]">{node.children.length} subcategorias</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 md:opacity-40 group-hover:opacity-100 transition-all">
+          <button type="button" onClick={(e) => { e.stopPropagation(); onAdd(node.id); }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-primary text-white transition-all border border-white/5 shadow-sm" title="Criar Subcategoria">
+            <Plus size={14} />
+          </button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(node); }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-blue-500 text-white transition-all border border-white/5 shadow-sm" title="Editar Categoria">
+            <Edit2 size={14} />
+          </button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(node.id); }} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-red-500 text-white transition-all border border-white/5 shadow-sm" title="Excluir Categoria">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && hasChildren && (
+        <div className="pl-6 mt-3 flex flex-col gap-3 relative">
+          <div className="absolute left-[19px] top-0 bottom-4 w-[2px] bg-white/20 rounded-full" />
+          {node.children.map(child => (
+            <div key={child.id} className="relative">
+              <div className="absolute left-[-16px] top-[24px] w-4 h-[2px] bg-white/20 rounded-full" />
+              <CategoryTreeNode 
+                node={child} 
+                level={level + 1}
+                onAdd={onAdd}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onMove={onMove}
+                expandedNodes={expandedNodes}
+                toggleExpand={toggleExpand}
+                draggedId={draggedId}
+                setDraggedId={setDraggedId}
+                dragOverId={dragOverId}
+                setDragOverId={setDragOverId}
+                dragPosition={dragPosition}
+                setDragPosition={setDragPosition}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Products() {
   const { products, addProduct, updateProduct, deleteProduct } = useApp();
   const fileInputRef = useRef(null);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
+  const [subCatFilter, setSubCatFilter] = useState('all');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_PRODUCT);
   const [modalTab, setModalTab] = useState('basico');
@@ -214,47 +337,211 @@ export default function Products() {
   const [tempMediaUrl, setTempMediaUrl] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  // Dynamic categories
   const [categoriesList, setCategoriesList] = useState(() => {
+    let cats = DEFAULT_CATEGORIES;
     try {
       const s = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      return s ? JSON.parse(s) : DEFAULT_CATEGORIES;
-    } catch { return DEFAULT_CATEGORIES; }
+      if (s) cats = JSON.parse(s);
+    } catch {}
+
+    // Migration to flat structure
+    if (cats.length > 0 && cats[0].subcategories !== undefined) {
+      const flat = [];
+      cats.forEach((c, i) => {
+        const catId = c.key || c.id || `cat_${Date.now()}_${i}`;
+        flat.push({
+          id: catId,
+          label: c.label,
+          emoji: c.emoji || '🏷️',
+          image: c.image || null,
+          parentId: null,
+          order: i,
+        });
+        if (c.subcategories && c.subcategories.length > 0) {
+          c.subcategories.forEach((sub, j) => {
+            flat.push({
+              id: sub.key || sub.id || `sub_${Date.now()}_${i}_${j}`,
+              label: sub.label,
+              emoji: sub.emoji || '🏷️',
+              image: sub.image || null,
+              parentId: catId,
+              order: j,
+            });
+          });
+        }
+      });
+      try { localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(flat)); } catch {}
+      return flat;
+    }
+    return cats;
   });
   const [showCatModal, setShowCatModal] = useState(false);
-  const [newCatForm, setNewCatForm] = useState({ key: '', label: '', emoji: '🏷️' });
-  const [emojiSearch, setEmojiSearch] = useState('');
+  const [newCatForm, setNewCatForm] = useState({ label: '', emoji: '🏷️', image: null });
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [addingSubCatId, setAddingSubCatId] = useState(null);
+
+  // Tree and DND states
+  const [expandedNodes, setExpandedNodes] = useState({});
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [dragPosition, setDragPosition] = useState(null);
+
+  const toggleExpand = (id) => setExpandedNodes(p => ({ ...p, [id]: !p[id] }));
 
   const saveCats = (cats) => {
     setCategoriesList(cats);
     try { localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(cats)); } catch {}
   };
 
-  const addCategory = () => {
-    if (!newCatForm.label.trim()) { toast.error('Nome da categoria obrigatório'); return; }
-    const key = newCatForm.key.trim() || newCatForm.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    if (categoriesList.find(c => c.key === key)) { toast.error('Categoria já existe'); return; }
-    saveCats([...categoriesList, { key, label: newCatForm.label.trim(), emoji: newCatForm.emoji || '🏷️' }]);
-    setNewCatForm({ key: '', label: '', emoji: '🏷️' });
-    toast.success('Categoria criada!');
+  const getTree = () => {
+    const map = {};
+    const roots = [];
+    categoriesList.forEach(c => map[c.id] = { ...c, children: [] });
+    categoriesList.forEach(c => {
+      if (c.parentId && map[c.parentId]) {
+        map[c.parentId].children.push(map[c.id]);
+      } else {
+        roots.push(map[c.id]);
+      }
+    });
+    const sortTree = (nodes) => {
+      nodes.sort((a, b) => a.order - b.order);
+      nodes.forEach(n => sortTree(n.children));
+    };
+    sortTree(roots);
+    return roots;
   };
 
-  const deleteCategory = (key) => {
-    if (DEFAULT_CATEGORIES.find(c => c.key === key)) { toast.error('Não é possível remover categorias padrão'); return; }
-    saveCats(categoriesList.filter(c => c.key !== key));
-    toast.success('Categoria removida');
+  const getDepth = (id) => {
+    let depth = 1;
+    const visited = new Set();
+    let curr = categoriesList.find(c => c.id === id);
+    while (curr && curr.parentId && !visited.has(curr.id)) {
+      visited.add(curr.id);
+      depth++;
+      curr = categoriesList.find(c => c.id === curr.parentId);
+    }
+    return depth;
   };
 
-  const filtered = useMemo(() =>
-    (products || []).filter(p => {
+  const addCategory = (parentId = null) => {
+    if (!newCatForm.label.trim()) { toast.error('Nome obrigatório'); return; }
+    if (parentId && getDepth(parentId) >= 4) { toast.error('Limite máximo de 3 níveis de subcategoria atingido'); return; }
+    
+    const id = `cat_${Date.now()}`;
+    const siblings = categoriesList.filter(c => c.parentId === parentId);
+    const order = siblings.length > 0 ? Math.max(...siblings.map(s => s.order)) + 1 : 0;
+    
+    saveCats([...categoriesList, { 
+      id, 
+      label: newCatForm.label.trim(), 
+      emoji: newCatForm.emoji || '🏷️', 
+      image: newCatForm.image || null,
+      parentId, 
+      order 
+    }]);
+    setNewCatForm({ label: '', emoji: '🏷️', image: null });
+    toast.success(parentId ? 'Subcategoria criada!' : 'Categoria criada!');
+  };
+
+  const updateCategory = (id, updates) => {
+    saveCats(categoriesList.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteCategory = (id) => {
+    if (DEFAULT_CATEGORIES.find(c => c.id === id)) { toast.error('Não é possível remover categorias padrão'); return; }
+    // Deleta também os filhos recursivamente
+    const idsToDelete = new Set([id]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const c of categoriesList) {
+        if (idsToDelete.has(c.parentId) && !idsToDelete.has(c.id)) {
+          idsToDelete.add(c.id);
+          added = true;
+        }
+      }
+    }
+    saveCats(categoriesList.filter(c => !idsToDelete.has(c.id)));
+    toast.success('Categoria e dependentes removidos');
+  };
+
+  const moveCategory = (dragId, targetId, position) => {
+    // position: 'before', 'after', 'inside'
+    if (dragId === targetId) return;
+    
+    const dragCat = categoriesList.find(c => c.id === dragId);
+    const targetCat = categoriesList.find(c => c.id === targetId);
+    if (!dragCat || !targetCat) return;
+
+    // Prevent cyclic drops
+    let curr = targetCat;
+    while (curr) {
+      if (curr.id === dragId) { toast.error('Movimento inválido'); return; }
+      curr = categoriesList.find(c => c.id === curr.parentId);
+    }
+
+    let newParentId = targetCat.parentId;
+    if (position === 'inside') {
+      if (getDepth(targetId) >= 4) { toast.error('Limite máximo de níveis atingido'); return; }
+      newParentId = targetId;
+    }
+
+    let newList = categoriesList.map(c => c.id === dragId ? { ...c, parentId: newParentId } : c);
+    
+    // Reorder
+    const siblings = newList.filter(c => c.parentId === newParentId).sort((a, b) => a.order - b.order);
+    const dragIndexInSiblings = siblings.findIndex(c => c.id === dragId);
+    siblings.splice(dragIndexInSiblings, 1);
+
+    let targetIndex = siblings.findIndex(c => c.id === targetId);
+    if (position === 'inside') {
+      siblings.push(dragCat);
+    } else {
+      if (targetIndex === -1) targetIndex = siblings.length;
+      siblings.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, dragCat);
+    }
+
+    siblings.forEach((s, i) => {
+      const cat = newList.find(c => c.id === s.id);
+      if (cat) cat.order = i;
+    });
+
+    saveCats(newList);
+  };
+
+  // Obter todos os descendant IDs de uma categoria
+  const getDescendantIds = (catId) => {
+    const descendants = new Set();
+    const stack = [catId];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (descendants.has(current)) continue; // Evita loop
+      descendants.add(current);
+      const children = categoriesList.filter(c => c.parentId === current).map(c => c.id);
+      stack.push(...children);
+    }
+    return descendants;
+  };
+
+  const filtered = useMemo(() => {
+    const targetDescendants = catFilter !== 'all' ? getDescendantIds(catFilter) : null;
+    return (products || []).filter(p => {
       if (!p) return false;
       const name = p.name || '';
       const sku = p.sku || '';
       const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
                             sku.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = catFilter === 'all' || p.category === catFilter;
+      
+      let matchesCategory = true;
+      if (catFilter !== 'all') {
+        const prodCatId = p.categoryId || p.subcategory || p.category;
+        matchesCategory = targetDescendants.has(prodCatId);
+      }
+      
       return matchesSearch && matchesCategory;
-    }), [products, search, catFilter]);
+    });
+  }, [products, search, catFilter, categoriesList]);
 
   const openAdd = () => { setForm(EMPTY_PRODUCT); setModal('add'); setModalTab('geral'); };
   const openEdit = (p) => { 
@@ -275,7 +562,7 @@ export default function Products() {
   const closeModal = () => { setModal(null); setForm(EMPTY_PRODUCT); }
 
   const handleSave = () => {
-    if (!form.name || !form.category) {
+    if (!form.name || (!form.categoryId && !form.category)) {
       toast.error('Preencha o nome e a categoria.');
       return;
     }
@@ -362,41 +649,118 @@ export default function Products() {
     toast.success(p.active ? 'Produto desativado' : 'Produto ativado');
   };
 
-  const grouped = categoriesList.map(cat => ({
+  // Helper for navigation
+  const currentPath = catFilter === 'all' ? [] : (() => {
+    const path = [];
+    const visited = new Set();
+    let curr = categoriesList.find(c => c.id === catFilter);
+    while (curr && !visited.has(curr.id)) {
+      path.unshift(curr);
+      visited.add(curr.id);
+      curr = categoriesList.find(c => c.id === curr.parentId);
+    }
+    return path;
+  })();
+
+  const currentLevelOptions = categoriesList.filter(c => c.parentId === (catFilter === 'all' ? null : catFilter)).sort((a,b) => a.order - b.order);
+
+  const getProductCount = (catId) => {
+    const descendants = getDescendantIds(catId);
+    return (products || []).filter(p => {
+       const prodCatId = p.categoryId || p.subcategory || p.category;
+       return descendants.has(prodCatId);
+    }).length;
+  };
+
+  const groupsToRender = catFilter === 'all' 
+    ? categoriesList.filter(c => c.parentId === null).sort((a,b) => a.order - b.order) 
+    : [categoriesList.find(c => c.id === catFilter)];
+
+  const grouped = groupsToRender.filter(Boolean).map(cat => ({
     ...cat,
-    items: filtered.filter(p => p.category === cat.key),
-  })).filter(g => catFilter === 'all' ? true : g.key === catFilter);
+    items: filtered.filter(p => {
+       const prodCatId = p.categoryId || p.subcategory || p.category;
+       const desc = getDescendantIds(cat.id);
+       return desc.has(prodCatId);
+    }),
+  }));
+
+  // Adicionar grupo para produtos sem categoria classificada corretamente se estiver no filtro 'all'
+  if (catFilter === 'all') {
+    const allValidCatIds = new Set(categoriesList.map(c => c.id));
+    const orphanedProducts = filtered.filter(p => {
+      const prodCatId = p.categoryId || p.subcategory || p.category;
+      return !prodCatId || !allValidCatIds.has(prodCatId);
+    });
+    if (orphanedProducts.length > 0) {
+      grouped.push({
+        id: 'orphans',
+        label: 'Sem Categoria / Não Classificados',
+        emoji: '❓',
+        items: orphanedProducts
+      });
+    }
+  }
 
   return (
     <div className="animate-fade">
       {/* Actions */}
-      <div className="flex items-center justify-between" style={{ marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className={`btn btn-sm ${catFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCatFilter('all')}>Todos ({products?.length || 0})</button>
-          {categoriesList.map(c => (
-            <button key={c.key} className={`btn btn-sm ${catFilter === c.key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCatFilter(c.key)}>
-              {c.emoji} {c.label} ({products?.filter(p => p.category === c.key).length || 0})
+      <div className="flex flex-col" style={{ marginBottom: 20, gap: 12 }}>
+        <div className="flex items-center justify-between flex-wrap" style={{ gap: 12 }}>
+          
+          {/* Breadcrumbs */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button className={`btn btn-sm ${catFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCatFilter('all')}>
+              Todos ({products?.length || 0})
             </button>
-          ))}
-          <button className="btn btn-sm btn-ghost" style={{ borderStyle: 'dashed', border: '1px dashed var(--border)' }} onClick={() => setShowCatModal(true)}>
-            <Tag size={13} /> Categorias
-          </button>
-          <button className="btn btn-sm btn-ghost" style={{ borderStyle: 'dashed', border: '1px dashed var(--border)' }} onClick={() => setShowCost(!showCost)}>
-            {showCost ? <EyeOff size={13} /> : <Eye size={13} />} {showCost ? 'Ocultar Custo' : 'Mostrar Custo'}
-          </button>
-        </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div className="search-wrap">
-            <Search size={14} className="search-icon" />
-            <input className="input-field" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+            
+            {currentPath.map((node, index) => (
+              <React.Fragment key={node.id}>
+                <span className="text-muted/50">/</span>
+                <button 
+                  className={`btn btn-sm ${index === currentPath.length - 1 ? 'btn-primary' : 'btn-secondary'}`} 
+                  onClick={() => setCatFilter(node.id)}
+                >
+                  {node.emoji} {node.label}
+                </button>
+              </React.Fragment>
+            ))}
+
+            <button className="btn btn-sm btn-ghost ml-2" style={{ borderStyle: 'dashed', border: '1px dashed var(--border)' }} onClick={() => setShowCatModal(true)}>
+              <Tag size={13} /> Gerenciar Categorias
+            </button>
+            <button className="btn btn-sm btn-ghost ml-2" style={{ borderStyle: 'dashed', border: '1px dashed var(--border)' }} onClick={() => setShowCost(!showCost)}>
+              {showCost ? <EyeOff size={13} /> : <Eye size={13} />} {showCost ? 'Ocultar Custo' : 'Mostrar Custo'}
+            </button>
           </div>
-          <button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Novo Produto</button>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div className="search-wrap">
+              <Search size={14} className="search-icon" />
+              <input className="input-field" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Novo Produto</button>
+          </div>
         </div>
+
+        {/* Subcategory Navigation */}
+        {currentLevelOptions.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingLeft: 8, borderLeft: '2px solid var(--primary-light)' }}>
+            {currentLevelOptions.map(sub => {
+              const count = getProductCount(sub.id);
+              return (
+                <button key={sub.id} className="btn btn-sm h-8 btn-secondary" onClick={() => setCatFilter(sub.id)}>
+                  {sub.emoji} {sub.label} <span className="opacity-50 ml-1">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Product List by Category */}
       {grouped.map(group => group.items.length > 0 && (
-        <div key={group.key} className="mb-10">
+        <div key={group.id} className="mb-10">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-xl shadow-inner border border-white/10">
               {group.emoji}
@@ -524,11 +888,10 @@ export default function Products() {
               <span style={{ marginLeft: 8, fontWeight: 700 }}>{deleteTarget.name}</span>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Preço: {fmt(deleteTarget.price)}</div>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Esta ação não pode ser desfeita. O produto será removido permanentemente.</p>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-secondary flex-1" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button onClick={handleDelete} style={{ flex: 1, padding: '10px 16px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Trash2 size={15} /> Excluir
+              <button className="btn bg-red-500 hover:bg-red-600 text-white flex-1 flex items-center justify-center gap-2 border border-red-500" onClick={handleDelete}>
+                <Trash2 size={14} /> Excluir
               </button>
             </div>
           </div>
@@ -538,29 +901,121 @@ export default function Products() {
       {/* Category Manager Modal */}
       {showCatModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h3 style={{ fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}><Tag size={16} color="var(--primary-light)" /> Gerenciar Categorias</h3>
-              <button className="btn btn-ghost btn-icon" onClick={() => setShowCatModal(false)}><X size={18} /></button>
+              <button className="btn btn-ghost btn-icon" onClick={() => { setShowCatModal(false); setEditingCatId(null); setAddingSubCatId(null); setNewCatForm({ label: '', emoji: '🏷️', image: null }); }}><X size={18} /></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {categoriesList.map(c => (
-                <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: 20 }}>{c.emoji}</span>
-                  <span style={{ flex: 1, fontWeight: 600 }}>{c.label}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{products?.filter(p => p.category === c.key).length || 0} produtos</span>
-                  {!DEFAULT_CATEGORIES.find(d => d.key === c.key) && (
-                    <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteCategory(c.key)}><Trash2 size={13} /></button>
-                  )}
-                </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16, overflowY: 'auto', paddingRight: 8, flex: 1 }} className="custom-scrollbar">
+              {getTree().map(rootNode => (
+                <CategoryTreeNode 
+                  key={rootNode.id}
+                  node={rootNode}
+                  level={0}
+                  onAdd={(parentId) => {
+                    setEditingCatId(null);
+                    setAddingSubCatId(parentId);
+                    setNewCatForm({ label: '', emoji: '🏷️', image: null });
+                    // Foco no input
+                    setTimeout(() => {
+                      const el = document.getElementById('new-cat-label');
+                      if (el) el.focus();
+                    }, 50);
+                    setExpandedNodes(p => ({ ...p, [parentId]: true }));
+                  }}
+                  onEdit={(node) => {
+                    setEditingCatId(node.id);
+                    setNewCatForm({ label: node.label, emoji: node.emoji, image: node.image });
+                  }}
+                  onDelete={deleteCategory}
+                  onMove={moveCategory}
+                  expandedNodes={expandedNodes}
+                  toggleExpand={toggleExpand}
+                  draggedId={draggedId}
+                  setDraggedId={setDraggedId}
+                  dragOverId={dragOverId}
+                  setDragOverId={setDragOverId}
+                  dragPosition={dragPosition}
+                  setDragPosition={setDragPosition}
+                />
               ))}
+              {categoriesList.length === 0 && (
+                <div className="py-10 text-center text-muted text-sm border border-dashed border-white/10 rounded-xl">
+                  Nenhuma categoria cadastrada.
+                </div>
+              )}
             </div>
-            <div style={{ padding: '12px', background: 'var(--surface-2)', borderRadius: 10, border: '1px dashed var(--border)' }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10 }}>Nova Categoria</p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input-field" style={{ width: 52 }} value={newCatForm.emoji} onChange={e => setNewCatForm(p => ({ ...p, emoji: e.target.value }))} placeholder="🏷️" />
-                <input className="input-field" style={{ flex: 1 }} value={newCatForm.label} onChange={e => setNewCatForm(p => ({ ...p, label: e.target.value }))} placeholder="Nome da categoria" />
-                <button className="btn btn-primary" onClick={addCategory}><Plus size={14} /> Criar</button>
+
+            <div style={{ padding: '16px', background: 'var(--surface-2)', borderRadius: 12, border: '1px dashed var(--border)', marginTop: 'auto' }}>
+              <div className="flex items-center justify-between mb-4">
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>
+                  {editingCatId ? 'Editar Categoria' : (addingSubCatId ? 'Nova Subcategoria' : 'Nova Categoria Raiz')}
+                </p>
+                {(editingCatId || addingSubCatId) && (
+                  <button className="text-[10px] text-primary hover:underline" onClick={() => { setEditingCatId(null); setAddingSubCatId(null); setNewCatForm({ label: '', emoji: '🏷️', image: null }); }}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <EmojiPicker value={newCatForm.emoji} onChange={(emoji) => setNewCatForm(p => ({ ...p, emoji }))} />
+                    <button 
+                      type="button" 
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-primary transition-all shadow-lg border border-white/10"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => setNewCatForm(p => ({ ...p, image: event.target.result }));
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      title="Fazer upload de foto"
+                    >
+                      <ImageIcon size={10} />
+                    </button>
+                    {newCatForm.image && (
+                      <button type="button" onClick={() => setNewCatForm(p => ({ ...p, image: null }))} className="absolute -bottom-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg border border-white/10" title="Remover imagem">
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {newCatForm.image && (
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
+                      <img src={newCatForm.image} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col flex-1 gap-2">
+                    <input id="new-cat-label" className="input-field h-10" value={newCatForm.label} onChange={e => setNewCatForm(p => ({ ...p, label: e.target.value }))} placeholder="Nome da categoria" />
+                    <button 
+                      className="btn btn-primary h-10 w-full" 
+                      onClick={() => {
+                        if (editingCatId) {
+                          updateCategory(editingCatId, { label: newCatForm.label, emoji: newCatForm.emoji, image: newCatForm.image });
+                          setEditingCatId(null);
+                          setNewCatForm({ label: '', emoji: '🏷️', image: null });
+                          toast.success('Categoria atualizada');
+                        } else {
+                          addCategory(addingSubCatId);
+                          setAddingSubCatId(null);
+                        }
+                      }}
+                    >
+                      {editingCatId ? <><Edit2 size={14} /> Salvar Alterações</> : <><Plus size={14} /> {addingSubCatId ? 'Criar Subcategoria' : 'Criar Categoria Raiz'}</>}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -597,6 +1052,7 @@ export default function Products() {
                   { id: 'ficha', label: 'Ficha Técnica', icon: <ClipboardList size={14} /> },
                   { id: 'marketing', label: 'Marketing', icon: <Globe size={14} /> },
                   { id: 'canais', label: 'Canais', icon: <LinkIcon size={14} /> },
+                  { id: 'codigos', label: 'Códigos & Etiquetas', icon: <ScanLine size={14} /> },
                   { id: 'anexos', label: 'Anexos', icon: <Paperclip size={14} /> },
                   { id: 'outros', label: 'Outros', icon: <Settings size={14} /> },
                   { id: 'historico', label: 'Histórico', icon: <History size={14} /> },
@@ -604,13 +1060,13 @@ export default function Products() {
                   <button 
                     key={t.id} 
                     onClick={() => setModalTab(t.id)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
-                      modalTab === t.id 
-                      ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
-                      : 'bg-white/5 border-white/5 text-muted hover:text-white hover:bg-white/10'
-                    }`}
+                    className={`btn btn-sm ${modalTab === t.id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ borderRadius: '1rem', whiteSpace: 'nowrap' }}
                   >
-                    {t.icon} {t.label}
+                    <span className={modalTab !== t.id ? 'opacity-70 text-muted-foreground' : ''}>
+                      {t.icon}
+                    </span>
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -754,11 +1210,11 @@ export default function Products() {
                           </div>
                         </div>
                         
-                        <div className="form-group">
+                        <div className="form-group mb-6">
                           <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Nome do Produto *</label>
                           <input className="input-field h-14 text-lg font-bold bg-white/5 border-white/10" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Açaí Premium 5L" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="form-group">
                             <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">SKU / Código</label>
                             <input className="input-field h-12 bg-white/5 border-white/10 font-mono" value={form.sku || ''} onChange={e => setForm({ ...form, sku: e.target.value })} placeholder="Ex: ACAI-001" />
@@ -774,13 +1230,71 @@ export default function Products() {
                             </select>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="form-group">
-                            <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Categoria</label>
-                            <select className="input-field h-12 bg-white/5 border-white/10" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                              {categoriesList.map(c => <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>)}
-                            </select>
-                          </div>
+
+                        {/* Hierarquia Dinâmica de Categorias */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                          {(() => {
+                            let path = [];
+                            if (form.categoryId) {
+                              let curr = categoriesList.find(c => c.id === form.categoryId);
+                              const visited = new Set();
+                              while (curr && !visited.has(curr.id)) {
+                                visited.add(curr.id);
+                                path.unshift(curr.id);
+                                curr = categoriesList.find(c => c.id === curr.parentId);
+                              }
+                            } else if (form.category) {
+                              // Fallback para produtos antigos
+                              const cat = categoriesList.find(c => c.id === form.category);
+                              if (cat) path.push(cat.id);
+                              if (form.subcategory) {
+                                const sub = categoriesList.find(c => c.id === form.subcategory && c.parentId === form.category);
+                                if (sub) path.push(sub.id);
+                              }
+                            }
+
+                            const selects = [];
+                            let currentParentId = null;
+
+                            for (let level = 0; level < 4; level++) {
+                              const options = categoriesList.filter(c => c.parentId === currentParentId).sort((a, b) => a.order - b.order);
+                              if (options.length === 0) break;
+
+                              const selectedId = path[level] || '';
+                              
+                              selects.push(
+                                <div key={`level_${level}`} className="form-group">
+                                  <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">
+                                    {level === 0 ? 'Categoria Principal' : `Subcategoria Nível ${level}`}
+                                  </label>
+                                  <select 
+                                    className="input-field h-12 bg-white/5 border-white/10" 
+                                    value={selectedId} 
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      if (val) {
+                                        setForm({ ...form, categoryId: val, category: '', subcategory: '' });
+                                      } else {
+                                        const prevId = level > 0 ? path[level - 1] : '';
+                                        setForm({ ...form, categoryId: prevId, category: '', subcategory: '' });
+                                      }
+                                    }}
+                                  >
+                                    <option value="">{level === 0 ? 'Selecione a categoria...' : 'Nenhuma'}</option>
+                                    {options.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+                                  </select>
+                                </div>
+                              );
+
+                              if (!selectedId) break;
+                              currentParentId = selectedId;
+                            }
+
+                            return selects;
+                          })()}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="form-group">
                             <label className="text-[10px] font-black text-muted uppercase tracking-widest mb-2 block">Marca</label>
                             <input className="input-field h-12 bg-white/5 border-white/10" value={form.brand || ''} onChange={e => setForm({ ...form, brand: e.target.value })} placeholder="Ex: Açaí Top" />
@@ -1435,6 +1949,58 @@ export default function Products() {
                         <button type="button" onClick={() => setForm({...form,attributes:[{attribute:'',value:''}]})} className="px-4 py-2 rounded-xl bg-white/10 text-muted text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">+ Primeiro Atributo</button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {modalTab === 'codigos' && (
+                  <div className="space-y-8 animate-fade">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Código de Barras */}
+                      <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="w-full flex justify-center bg-white p-4 rounded-xl shadow-inner">
+                          {form.ean ? (
+                            <Barcode value={form.ean} format="EAN13" width={2} height={80} background="#ffffff" lineColor="#000000" />
+                          ) : (
+                            <div className="py-10 text-black/40 text-xs font-black uppercase tracking-widest">Nenhum EAN definido</div>
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white">Código de Barras (EAN-13)</h4>
+                          <p className="text-[10px] text-muted/60 mt-2 max-w-xs mx-auto">Utilizado para escaneamento em caixas de supermercado e leitores USB padrão.</p>
+                        </div>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => window.print()}
+                        >
+                          <Printer size={14} /> Imprimir Etiqueta
+                        </button>
+                      </div>
+
+                      {/* QR Code */}
+                      <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="w-48 h-48 bg-white p-4 rounded-xl shadow-inner flex items-center justify-center">
+                          <QRCodeSVG 
+                            value={`https://acai-erp.com.br/product/${form.id || form.sku || 'new'}`} 
+                            size={160}
+                            bgColor={"#ffffff"}
+                            fgColor={"#000000"}
+                            level={"Q"}
+                          />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-white">QR Code do Produto</h4>
+                          <p className="text-[10px] text-muted/60 mt-2 max-w-xs mx-auto">Escaneável por câmeras de celular para abrir o link direto do produto no e-commerce.</p>
+                        </div>
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => window.print()}
+                        >
+                          <Printer size={14} /> Imprimir QR Code
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 

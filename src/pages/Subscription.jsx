@@ -133,7 +133,7 @@ export default function Subscription() {
                 <button className="btn btn-outline" onClick={() => document.getElementById('plans-grid').scrollIntoView({behavior: 'smooth'})}>
                   Alterar Plano
                 </button>
-                <button className="btn btn-ghost text-danger hover:bg-danger/10">
+                <button className="btn btn-ghost text-danger hover:bg-danger/10" onClick={() => toast('Cancelamento não disponível na versão de teste', { icon: '🚧' })}>
                   Cancelar Assinatura
                 </button>
               </div>
@@ -156,7 +156,7 @@ export default function Subscription() {
                   </div>
                 </div>
               </div>
-              <button className="text-xs text-primary font-bold mt-4 text-left hover:underline">
+              <button className="text-xs text-primary font-bold mt-4 text-left hover:underline" onClick={() => toast('Atualização de pagamento em breve', { icon: '🚧' })}>
                 Atualizar Método de Pagamento
               </button>
             </div>
@@ -189,7 +189,7 @@ export default function Subscription() {
                            <span className="badge badge-success text-[10px]">Pago</span>
                          </td>
                          <td className="py-4 text-right">
-                           <button className="text-primary hover:underline text-xs font-bold flex items-center gap-1 justify-end ml-auto">
+                           <button className="text-primary hover:underline text-xs font-bold flex items-center gap-1 justify-end ml-auto" onClick={() => toast('Baixando PDF...', { icon: '📄' })}>
                              <FileText size={14} /> PDF
                            </button>
                          </td>

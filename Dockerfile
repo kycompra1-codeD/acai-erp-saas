@@ -14,6 +14,10 @@ RUN npm install --legacy-peer-deps
 # Copiar o restante do código-fonte
 COPY . .
 
+# URL da API — deve ser passada em produção via build arg
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Gerar o build de produção
 RUN npm run build
 

@@ -26,6 +26,7 @@ import Permissions from './pages/Permissions';
 import Purchases from './pages/Purchases';
 import Settings from './pages/Settings';
 import Subscription from './pages/Subscription';
+import Sales from './pages/Sales';
 import Login from './pages/Login';
 import { Toaster } from 'react-hot-toast';
 
@@ -58,6 +59,14 @@ function App() {
                 element={
                   <Layout>
                     <Orders />
+                  </Layout>
+                }
+              />
+              <Route
+                path="/sales"
+                element={
+                  <Layout>
+                    <Sales />
                   </Layout>
                 }
               />

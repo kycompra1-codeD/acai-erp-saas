@@ -204,71 +204,74 @@ export default function Settings() {
   ];
 
   return (
-    <div className="animate-fade lg:flex gap-8 items-start max-w-[1400px] mx-auto pb-12">
-      {/* Sidebar Navigation */}
-      <div className="w-full lg:w-[280px] flex flex-col mb-6 lg:mb-0 glass-card p-4 sticky top-6 lg:min-h-[calc(100vh-120px)]">
-        <div className="mb-6 px-2">
-          <h2 className="text-xl font-bold gradient-text">Configurações</h2>
-          <p className="text-sm text-muted mt-1">Gerencie seu sistema</p>
+    <div className="animate-fade flex flex-col gap-6 max-w-[1400px] mx-auto pb-12 w-full">
+      
+      {/* Header and Logout */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+          <h2 className="text-3xl font-bold gradient-text">Configurações</h2>
+          <p className="text-sm text-muted mt-1">Gerencie as preferências e integrações do seu sistema</p>
         </div>
         
-        <div className="flex flex-col flex-1" style={{ gap: '4px' }}>
-          {tabs.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <div
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`nav-link w-full text-left border-none outline-none justify-start cursor-pointer select-none ${isActive ? 'active' : ''}`}
-                style={{ backgroundColor: isActive ? '' : 'transparent' }}
-              >
-                <tab.icon size={18} />
-                <span>{tab.label}</span>
-                {tab.id === 'hardware' && (
-                  <span className="ml-auto badge badge-warning">Novo</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        
-        <div className="mt-8 pt-4 border-t border-border">
+        <div className="flex items-center">
           {!showLogoutConfirm ? (
-            <div 
-              className="nav-link w-full text-left border-none outline-none justify-start text-danger hover:bg-danger-bg hover:text-danger cursor-pointer select-none" 
-              style={{ color: 'var(--danger)', backgroundColor: 'transparent' }}
+            <button 
+              className="btn btn-danger btn-sm flex items-center gap-2"
               onClick={() => setShowLogoutConfirm(true)}
             >
-              <LogOut size={18} />
-              <span>Sair do Sistema</span>
-            </div>
+              <LogOut size={16} />
+              Sair do Sistema
+            </button>
           ) : (
-            <div className="animate-fade bg-surface-2 p-4 rounded-lg border border-border mt-2">
-              <p className="text-sm font-bold text-danger mb-4 text-center">Encerrar sessão?</p>
-              <div className="flex items-center gap-2">
-                <button 
-                  className="btn btn-danger flex-1 py-2 text-xs"
-                  onClick={() => logout()}
-                >
-                  Sim, Sair
-                </button>
-                <button 
-                  className="btn btn-secondary flex-1 py-2 text-xs"
-                  onClick={() => setShowLogoutConfirm(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
+            <div className="flex items-center gap-3 animate-fade bg-surface-2 px-4 py-2 rounded-lg border border-danger/20">
+              <span className="text-sm font-bold text-danger">Encerrar sessão?</span>
+              <button 
+                className="btn btn-danger btn-sm"
+                onClick={() => logout()}
+              >
+                Sim, Sair
+              </button>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancelar
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Settings Content */}
-      <div className="flex-1 glass-card p-6 lg:p-10 overflow-hidden">
+      {/* Horizontal Tabs */}
+      <div className="glass-card p-2 sticky top-6 z-10 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex items-center gap-2 min-w-max">
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                  isActive 
+                    ? 'bg-primary/20 text-primary-light shadow-[0_0_15px_rgba(124,58,237,0.1)] border border-primary/30' 
+                    : 'text-muted hover:bg-surface-2 hover:text-text border border-transparent'
+                }`}
+              >
+                <tab.icon size={18} className={isActive ? "text-primary-light" : ""} />
+                <span>{tab.label}</span>
+                {tab.id === 'hardware' && (
+                  <span className="badge badge-warning text-[10px] px-1.5 py-0.5 ml-1">Novo</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-
-        {/* ====== ABA UNIDADES ====== */}
+      {/* Main Content Area */}
+      <div className="glass-card p-6 lg:p-10 w-full min-w-0 overflow-hidden">
+        
+        {/* Renderiza o conteúdo da aba selecionada */}
         {activeTab === 'unidades' && (
           <div className="space-y-8 animate-fade">
             <div className="flex items-center justify-between border-b border-border pb-6">
@@ -358,13 +361,15 @@ export default function Settings() {
 
             {isCompanyModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className="bg-card w-full max-w-md rounded-2xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-6 border-b border-border bg-muted/30">
-                    <h4 className="text-xl font-bold">{editingCompany ? 'Editar Unidade' : 'Nova Unidade'}</h4>
-                    <p className="text-sm text-muted">Preencha os dados da filial.</p>
+                <div className="glass-card bg-surface/95 w-full max-w-3xl rounded-2xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-6 border-b border-white/5 bg-surface-2/50 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-xl font-bold gradient-text">{editingCompany ? 'Editar Unidade' : 'Nova Unidade'}</h4>
+                      <p className="text-sm text-muted mt-1">Preencha os dados de identificação e endereço da filial.</p>
+                    </div>
                   </div>
                   
-                  <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                  <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="form-group md:col-span-2">
                         <label className="form-label text-white">Nome da Unidade</label>
@@ -1409,7 +1414,7 @@ export default function Settings() {
                     <div className="text-xs text-muted">Aumente a segurança da sua conta</div>
                   </div>
                 </div>
-                <button className="btn btn-secondary btn-sm">Ativar</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => toast('Autenticação em duas etapas em breve', { icon: '🚧' })}>Ativar</button>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-surface-2 rounded-radius border border-border">
