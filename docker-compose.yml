@@ -1,7 +1,9 @@
 # ============================================================
 # Açaí ERP SaaS - Docker Compose (Produção / VPS Hostinger)
 # ============================================================
-# Uso: docker compose up -d
+# A Hostinger VPS já vem com Traefik como proxy reverso.
+# Quando tiver domínio, descomente as seções "traefik" abaixo
+# e atualize FRONTEND_URL e VITE_API_URL no .env da VPS.
 # ============================================================
 
 networks:
@@ -88,6 +90,13 @@ services:
       - "3001:3001"
     networks:
       - acai-net
+    # --- DESCOMENTAR QUANDO TIVER DOMÍNIO (usa Traefik da Hostinger) ---
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.acai-backend.rule=Host(`api.seudominio.com.br`)"
+    #   - "traefik.http.routers.acai-backend.entrypoints=websecure"
+    #   - "traefik.http.routers.acai-backend.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.acai-backend.loadbalancer.server.port=3001"
 
   # ============================================================
   # FRONTEND - React + Nginx
@@ -106,30 +115,16 @@ services:
       - acai-net
     depends_on:
       - backend
-
-  # ============================================================
-  # PROXY REVERSO - Nginx Proxy Manager
-  # (Usar apenas na VPS em produção)
-  # ============================================================
-  nginx-proxy-manager:
-    image: jc21/nginx-proxy-manager:latest
-    container_name: acai-nginx-proxy
-    restart: unless-stopped
-    profiles:
-      - production   # Só sobe com: docker compose --profile production up -d
-    ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
-    volumes:
-      - nginx_pm_data:/data
-      - nginx_pm_letsencrypt:/etc/letsencrypt
-    networks:
-      - acai-net
+    # --- DESCOMENTAR QUANDO TIVER DOMÍNIO (usa Traefik da Hostinger) ---
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.acai-frontend.rule=Host(`app.seudominio.com.br`)"
+    #   - "traefik.http.routers.acai-frontend.entrypoints=websecure"
+    #   - "traefik.http.routers.acai-frontend.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.acai-frontend.loadbalancer.server.port=80"
 
   # ============================================================
   # PAINEL DOCKER - Portainer
-  # (Usar apenas na VPS em produção)
   # ============================================================
   portainer:
     image: portainer/portainer-ce:latest
@@ -147,7 +142,6 @@ services:
 
   # ============================================================
   # BACKUP AUTOMÁTICO - PostgreSQL para Nuvem
-  # (Usar apenas na VPS em produção)
   # ============================================================
   pg-backup:
     image: eeshugerman/postgres-backup-s3:16
@@ -177,7 +171,6 @@ services:
 
   # ============================================================
   # MONITORAMENTO - Uptime Kuma
-  # (Usar apenas na VPS em produção)
   # ============================================================
   uptime-kuma:
     image: louislam/uptime-kuma:latest
@@ -193,12 +186,10 @@ services:
       - acai-net
 
 # ============================================================
-# VOLUMES (declarados uma única vez aqui no final)
+# VOLUMES
 # ============================================================
 volumes:
   postgres_data:
   redis_data:
-  nginx_pm_data:
-  nginx_pm_letsencrypt:
   portainer_data:
   uptime_kuma_data:
