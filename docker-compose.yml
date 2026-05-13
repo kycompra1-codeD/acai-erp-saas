@@ -7,8 +7,6 @@
 networks:
   acai-net:
     driver: bridge
-  traefik-net:
-    external: true   # rede compartilhada com o Traefik da Hostinger
 
 services:
 
@@ -94,10 +92,9 @@ services:
       - "127.0.0.1:3001:3001"
     networks:
       - acai-net
-      - traefik-net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik-net"
+      - "traefik.docker.network=acai-net"
       - "traefik.http.routers.acai-api.rule=Host(`api.zullya.com.br`)"
       - "traefik.http.routers.acai-api.entrypoints=websecure"
       - "traefik.http.routers.acai-api.tls.certresolver=letsencrypt"
@@ -123,12 +120,11 @@ services:
       - "127.0.0.1:8080:80"
     networks:
       - acai-net
-      - traefik-net
     depends_on:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik-net"
+      - "traefik.docker.network=acai-net"
       # Rota principal: zullya.com.br e www.zullya.com.br
       - "traefik.http.routers.acai-frontend.rule=Host(`zullya.com.br`) || Host(`www.zullya.com.br`)"
       - "traefik.http.routers.acai-frontend.entrypoints=websecure"
