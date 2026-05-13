@@ -23,6 +23,8 @@ app.use(helmet());
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:9999',
+    'https://zullya.com.br',
+    'https://www.zullya.com.br',
     'http://localhost:3000',
     'http://localhost:8080',
   ],
