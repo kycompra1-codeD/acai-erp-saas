@@ -83,6 +83,8 @@ services:
       RRPAY_WEBHOOK_SECRET: ${RRPAY_WEBHOOK_SECRET:-}
       RRPAY_API_KEY: ${RRPAY_API_KEY:-}
       RRPAY_BASE_URL: ${RRPAY_BASE_URL:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-Açaí ERP <noreply@zullya.com.br>}
     depends_on:
       postgres:
         condition: service_healthy

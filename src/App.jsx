@@ -28,6 +28,7 @@ import Settings from './pages/Settings';
 import Subscription from './pages/Subscription';
 import Sales from './pages/Sales';
 import Login from './pages/Login';
+import ResetSenha from './pages/ResetSenha';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/redefinir-senha" element={<ResetSenha />} />
               <Route
                 path="/"
                 element={

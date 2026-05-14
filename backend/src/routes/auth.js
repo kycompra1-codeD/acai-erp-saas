@@ -2,9 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const { query, withTransaction } = require('../db/connection');
 const { authMiddleware } = require('../middlewares/authMiddleware');
+const { enviarBoasVindas, enviarRedefinicaoSenha } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -93,6 +95,9 @@ router.post('/registro', [
         'UPDATE usuarios SET refresh_token_hash = $1 WHERE id = $2',
         [refreshHash, usuario_id]
       );
+
+      // Enviar e-mail de boas-vindas (não bloqueia a resposta)
+      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => {});
 
       return res.status(201).json({
         sucesso: true,
@@ -288,6 +293,92 @@ router.get('/me', authMiddleware, async (req, res) => {
     return res.json({ sucesso: true, dados: rows[0] });
   } catch (err) {
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// POST /api/auth/esqueci-senha - Solicitar redefinição de senha
+// ============================================================
+router.post('/esqueci-senha', [
+  body('email').isEmail().withMessage('E-mail inválido'),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) {
+    return res.status(400).json({ sucesso: false, erros: erros.array() });
+  }
+
+  const { email } = req.body;
+
+  // Resposta genérica para não revelar se o e-mail existe
+  const resposta = { sucesso: true, mensagem: 'Se este e-mail estiver cadastrado, você receberá as instruções em breve.' };
+
+  try {
+    const { rows } = await query(
+      'SELECT id, nome FROM usuarios WHERE email = $1 AND ativo = true LIMIT 1',
+      [email]
+    );
+    if (rows.length === 0) return res.json(resposta);
+
+    const usuario = rows[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(token, 10);
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+    await query(
+      'UPDATE usuarios SET reset_senha_token_hash = $1, reset_senha_expiry = $2 WHERE id = $3',
+      [tokenHash, expiry.toISOString(), usuario.id]
+    );
+
+    await enviarRedefinicaoSenha({ email, nome: usuario.nome, token });
+
+    return res.json(resposta);
+  } catch (err) {
+    console.error('❌ Erro em esqueci-senha:', err);
+    return res.json(resposta); // nunca expõe o erro
+  }
+});
+
+// ============================================================
+// POST /api/auth/redefinir-senha - Usar o token para trocar a senha
+// ============================================================
+router.post('/redefinir-senha', [
+  body('token').notEmpty().withMessage('Token é obrigatório'),
+  body('nova_senha').isLength({ min: 8 }).withMessage('Senha deve ter ao menos 8 caracteres'),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) {
+    return res.status(400).json({ sucesso: false, erros: erros.array() });
+  }
+
+  const { token, nova_senha, email } = req.body;
+
+  try {
+    const { rows } = await query(
+      `SELECT id, reset_senha_token_hash, reset_senha_expiry
+       FROM usuarios WHERE email = $1 AND ativo = true AND reset_senha_expiry > NOW() LIMIT 1`,
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ sucesso: false, mensagem: 'Token inválido ou expirado.' });
+    }
+
+    const usuario = rows[0];
+    const tokenValido = await bcrypt.compare(token, usuario.reset_senha_token_hash || '');
+    if (!tokenValido) {
+      return res.status(400).json({ sucesso: false, mensagem: 'Token inválido ou expirado.' });
+    }
+
+    const senhaHash = await bcrypt.hash(nova_senha, 12);
+    await query(
+      'UPDATE usuarios SET senha_hash = $1, reset_senha_token_hash = NULL, reset_senha_expiry = NULL WHERE id = $2',
+      [senhaHash, usuario.id]
+    );
+
+    return res.json({ sucesso: true, mensagem: 'Senha redefinida com sucesso. Faça login com sua nova senha.' });
+  } catch (err) {
+    console.error('❌ Erro em redefinir-senha:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno no servidor.' });
   }
 });
 

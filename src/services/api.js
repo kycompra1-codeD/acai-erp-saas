@@ -113,6 +113,26 @@ export const authApi = {
   },
 
   /**
+   * Solicitar redefinição de senha (envia e-mail)
+   */
+  esqueciSenha: async (email) => {
+    return apiFetch('/auth/esqueci-senha', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /**
+   * Redefinir senha com token recebido por e-mail
+   */
+  redefinirSenha: async (email, token, nova_senha) => {
+    return apiFetch('/auth/redefinir-senha', {
+      method: 'POST',
+      body: JSON.stringify({ email, token, nova_senha }),
+    });
+  },
+
+  /**
    * Logout — revoga o refresh token no servidor
    */
   logout: async () => {

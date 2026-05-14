@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grape, Eye, EyeOff, Loader2, Shield, Wifi, WifiOff } from 'lucide-react';
+import { Grape, Eye, EyeOff, Loader2, Shield, Wifi, WifiOff, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function Login() {
@@ -9,8 +10,28 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const { login, backendOnline } = useAuth();
   const navigate = useNavigate();
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setForgotLoading(true);
+    try {
+      await authApi.esqueciSenha(forgotEmail);
+      toast.success('Se o e-mail estiver cadastrado, você receberá as instruções em breve.');
+      setForgotOpen(false);
+      setForgotEmail('');
+    } catch {
+      toast.success('Se o e-mail estiver cadastrado, você receberá as instruções em breve.');
+      setForgotOpen(false);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,7 +156,16 @@ export default function Login() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Senha</label>
+            <div className="flex items-center justify-between">
+              <label className="form-label">Senha</label>
+              <button
+                type="button"
+                onClick={() => setForgotOpen(true)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--primary-light)', padding: 0 }}
+              >
+                Esqueci minha senha
+              </button>
+            </div>
             <div style={{ position: 'relative' }}>
               <input
                 className="input-field"
@@ -213,6 +243,46 @@ export default function Login() {
           </span>
         </p>
       </div>
+
+      {/* Modal: Esqueci minha senha */}
+      {forgotOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 16,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 380,
+            position: 'relative',
+          }}>
+            <button
+              onClick={() => { setForgotOpen(false); setForgotEmail(''); }}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              <X size={18} />
+            </button>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Recuperar senha</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+              Informe seu e-mail e enviaremos as instruções para redefinir sua senha.
+            </p>
+            <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input
+                className="input-field"
+                type="email"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                placeholder="seu@email.com.br"
+                autoFocus
+              />
+              <button type="submit" className="btn btn-primary" disabled={forgotLoading || !forgotEmail}>
+                {forgotLoading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                {forgotLoading ? 'Enviando...' : 'Enviar instruções'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

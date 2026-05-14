@@ -4,6 +4,10 @@
 -- Execute: psql -U acai_erp_user -d acai_erp -f migrate.sql
 -- ============================================================
 
+-- Colunas para redefinição de senha (adicionadas na v1.1)
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_senha_token_hash VARCHAR(255);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_senha_expiry TIMESTAMPTZ;
+
 -- ============================================================
 -- CATEGORIAS DE PRODUTOS
 -- ============================================================
