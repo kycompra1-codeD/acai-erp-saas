@@ -1,7 +1,7 @@
 -- ============================================================
--- Açaí ERP SaaS - Schema Multi-tenant PostgreSQL 16
+-- Zullya ERP - Schema Multi-tenant PostgreSQL 16
 -- ============================================================
--- Execute com: psql -U acai_erp_user -d acai_erp -f schema.sql
+-- Execute com: psql -U zullya_erp_user -d zullya_erp -f schema.sql
 -- ============================================================
 
 -- Extensões

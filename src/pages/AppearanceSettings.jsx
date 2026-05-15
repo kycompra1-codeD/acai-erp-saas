@@ -51,9 +51,9 @@ export default function AppearanceSettings() {
           className="btn btn-secondary" 
           onClick={() => { 
             if (confirm('Deseja resetar TODOS os dados e o tema para o padrão de fábrica? Isso limpará configurações de unidades e branding antigo.')) {
-              localStorage.removeItem('acai_erp_theme'); 
-              localStorage.removeItem('acai_system_data');
-              localStorage.removeItem('acai_erp_dashboard_order');
+              localStorage.removeItem('zullya_erp_theme'); 
+              localStorage.removeItem('zullya_system_data');
+              localStorage.removeItem('zullya_erp_dashboard_order');
               window.location.reload(); 
             }
           }}

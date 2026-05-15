@@ -82,11 +82,11 @@ fail2ban-client status
 
 ```bash
 # Criar pasta de projetos
-mkdir -p /opt/acai-erp
-cd /opt/acai-erp
+mkdir -p /opt/zullya-erp
+cd /opt/zullya-erp
 
 # Clonar do GitHub
-git clone https://github.com/SEU_USUARIO/acai-erp-saas-2-3.git .
+git clone https://github.com/SEU_USUARIO/zullya-erp.git .
 
 # Ou fazer upload via SFTP e descompactar
 ```
@@ -273,7 +273,7 @@ docker stats
 
 # Entrar dentro de um container (debug)
 docker compose exec backend sh
-docker compose exec postgres psql -U acai_erp_user -d acai_erp
+docker compose exec postgres psql -U zullya_erp_user -d zullya_erp
 ```
 
 ---

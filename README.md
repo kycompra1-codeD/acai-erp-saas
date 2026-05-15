@@ -48,6 +48,6 @@ Para inicializar o repositório no seu GitHub:
 git init
 git add .
 git commit -m "chore: setup infrastructure and branding"
-git remote add origin https://github.com/kycompra1-codeD/acai-erp-saas.git
+git remote add origin https://github.com/kycompra1-codeD/zullya-erp.git
 git push -u origin main
 ```

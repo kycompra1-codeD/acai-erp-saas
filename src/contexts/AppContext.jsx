@@ -19,23 +19,23 @@ import {
 } from '../services/apiAdapter';
 
 const AppContext = createContext(null);
-const STORAGE_KEY = 'acai_system_data';
+const STORAGE_KEY = 'zullya_system_data';
 
 function isAuthenticated() {
-  return !!localStorage.getItem('acai_access_token');
+  return !!localStorage.getItem('zullya_access_token');
 }
 
 function cleanBranding(data) {
   if (!data) return data;
   let str = JSON.stringify(data);
   const legacyTerms = [
-    { old: /AçaíBom/g, new: 'Açaí ERP SaaS' },
-    { old: /AcaìBom/g, new: 'Açaí ERP SaaS' },
-    { old: /AçaíTop/g, new: 'Açaí ERP SaaS' },
-    { old: /AcaìTop/g, new: 'Açaí ERP SaaS' },
-    { old: /AçaíSystem/g, new: 'Açaí ERP SaaS' },
-    { old: /acaibom\.com\.br/g, new: 'acaierpsaas.com.br' },
-    { old: /@acaibom/g, new: '@acaierp_saas' },
+    { old: /AçaíBom/g, new: 'Zullya ERP' },
+    { old: /AcaìBom/g, new: 'Zullya ERP' },
+    { old: /AçaíTop/g, new: 'Zullya ERP' },
+    { old: /AcaìTop/g, new: 'Zullya ERP' },
+    { old: /AçaíSystem/g, new: 'Zullya ERP' },
+    { old: /acaibom\.com\.br/g, new: 'zullya.com.br' },
+    { old: /@acaibom/g, new: '@zullya_erp' },
   ];
   legacyTerms.forEach(t => { str = str.replace(t.old, t.new); });
   return JSON.parse(str);

@@ -20,7 +20,7 @@ function formatDateTime(iso) {
 /** Lê as configurações salvas no localStorage pelo AppContext */
 function loadSettings() {
   try {
-    const raw = localStorage.getItem('acai_system_data');
+    const raw = localStorage.getItem('zullya_system_data');
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     const activeCompanyId = parsed.activeCompanyId;

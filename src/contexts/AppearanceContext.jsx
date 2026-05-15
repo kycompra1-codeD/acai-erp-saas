@@ -6,7 +6,7 @@ const AppearanceContext = createContext();
 export function AppearanceProvider({ children }) {
   // Estado inicial recuperado do localStorage ou preset padrão
   const [currentTheme, setCurrentTheme] = useState(() => {
-    const saved = localStorage.getItem('acai_erp_theme');
+    const saved = localStorage.getItem('zullya_erp_theme');
     let theme = saved ? JSON.parse(saved) : THEME_PRESETS.acai;
     
     // MIGRATION: Se o tema for o 'acai' mas tiver as cores antigas (azuladas), força o reset para o novo preset
@@ -19,7 +19,7 @@ export function AppearanceProvider({ children }) {
   });
 
   const [dashboardOrder, setDashboardOrder] = useState(() => {
-    const saved = localStorage.getItem('acai_erp_dashboard_order');
+    const saved = localStorage.getItem('zullya_erp_dashboard_order');
     return saved ? JSON.parse(saved) : ['stats', 'sales_chart', 'recent_orders', 'inventory_alert', 'loyalty_summary'];
   });
 
@@ -66,11 +66,11 @@ export function AppearanceProvider({ children }) {
     document.body.style.fontFamily = currentTheme.fontFamily;
 
     // Salvar no localStorage
-    localStorage.setItem('acai_erp_theme', JSON.stringify(currentTheme));
+    localStorage.setItem('zullya_erp_theme', JSON.stringify(currentTheme));
   }, [currentTheme]);
 
   useEffect(() => {
-    localStorage.setItem('acai_erp_dashboard_order', JSON.stringify(dashboardOrder));
+    localStorage.setItem('zullya_erp_dashboard_order', JSON.stringify(dashboardOrder));
   }, [dashboardOrder]);
 
   const updateTheme = (newTheme) => {

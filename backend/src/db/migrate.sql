@@ -1,7 +1,7 @@
 -- ============================================================
--- Açaí ERP SaaS - Migration: Schema Completo do ERP
+-- Zullya ERP - Migration: Schema Completo do ERP
 -- ============================================================
--- Execute: psql -U acai_erp_user -d acai_erp -f migrate.sql
+-- Execute: psql -U zullya_erp_user -d zullya_erp -f migrate.sql
 -- ============================================================
 
 -- Colunas para redefinição de senha (adicionadas na v1.1)

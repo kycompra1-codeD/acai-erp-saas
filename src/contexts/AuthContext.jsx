@@ -63,20 +63,20 @@ export function AuthProvider({ children }) {
 
       if (online) {
         // Tentar restaurar sessão via token salvo
-        const token = localStorage.getItem('acai_access_token');
+        const token = localStorage.getItem('zullya_access_token');
         if (token) {
           try {
             const dados = await authApi.me();
             _setSession(dados, false);
           } catch {
             // Token inválido/expirado — sessão limpa
-            localStorage.removeItem('acai_access_token');
-            localStorage.removeItem('acai_refresh_token');
+            localStorage.removeItem('zullya_access_token');
+            localStorage.removeItem('zullya_refresh_token');
           }
         }
       } else {
         // Backend offline — tentar sessão demo salva
-        const saved = localStorage.getItem('acai_auth');
+        const saved = localStorage.getItem('zullya_auth');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -114,7 +114,7 @@ export function AuthProvider({ children }) {
     setModoDemo(isDemo);
 
     if (isDemo) {
-      localStorage.setItem('acai_auth', JSON.stringify(userObj));
+      localStorage.setItem('zullya_auth', JSON.stringify(userObj));
     }
   };
 
@@ -144,7 +144,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setEmpresa(null);
     setModoDemo(false);
-    localStorage.removeItem('acai_auth');
+    localStorage.removeItem('zullya_auth');
   };
 
   // ── Verificar permissão ────────────────────────────────────

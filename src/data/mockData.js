@@ -8,10 +8,10 @@ import { format, subDays } from 'date-fns';
 export function getFreshMockData() {
   const initialCompanies = [
     { 
-      id: 'comp-1', name: 'Açaí ERP SaaS - Matriz', cnpj: '00.000.000/0001-00', address: 'Rua das Flores, 123 — Centro', color: '#8B5CF6',
-      phone: '(11) 99999-0000', email: 'contato@acai-erp-saas.com.br', website: 'https://acai-erp-saas.com.br',
+      id: 'comp-1', name: 'Zullya ERP - Matriz', cnpj: '00.000.000/0001-00', address: 'Rua das Flores, 123 — Centro', color: '#8B5CF6',
+      phone: '(11) 99999-0000', email: 'contato@zullya.com.br', website: 'https://zullya.com.br',
       cep: '01000-000', street: 'Rua das Flores', number: '123', complement: '', neighborhood: 'Centro', city: 'São Paulo', state: 'SP',
-      instagram: '@acaierpsaas', tiktok: '@acaierpsaas', youtube: 'youtube.com/@acaierpsaas',
+      instagram: '@zullya_erp', tiktok: '@zullya_erp', youtube: 'youtube.com/@zullya_erp',
       hours_seg: 'aberto', hours_seg_open: '09:00', hours_seg_close: '22:00',
       hours_ter: 'aberto', hours_ter_open: '09:00', hours_ter_close: '22:00',
       hours_qua: 'aberto', hours_qua_open: '09:00', hours_qua_close: '22:00',
@@ -21,8 +21,8 @@ export function getFreshMockData() {
       hours_dom: 'aberto', hours_dom_open: '10:00', hours_dom_close: '22:00',
     },
     { 
-      id: 'comp-2', name: 'Açaí ERP SaaS - Shopping', cnpj: '00.000.000/0002-99', address: 'Av. Paulista, 1000 — Shopping Premium Center', color: '#F472B6',
-      phone: '(11) 98888-1111', email: 'shopping@acai-erp-saas.com.br', website: 'https://acai-erp-saas.com.br',
+      id: 'comp-2', name: 'Zullya ERP - Shopping', cnpj: '00.000.000/0002-99', address: 'Av. Paulista, 1000 — Shopping Premium Center', color: '#F472B6',
+      phone: '(11) 98888-1111', email: 'shopping@zullya.com.br', website: 'https://zullya.com.br',
       cep: '01310-100', street: 'Av. Paulista', number: '1000', complement: 'Loja 45', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP',
       instagram: '@acaierpsaasshopping', tiktok: '', youtube: '',
       hours_seg: 'aberto', hours_seg_open: '10:00', hours_seg_close: '22:00',

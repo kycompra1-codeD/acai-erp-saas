@@ -1,5 +1,5 @@
 // ============================================================
-// Açaí ERP - Serviço de API
+// Zullya ERP - Serviço de API
 // Centraliza todas as chamadas ao backend Node.js
 // ============================================================
 
@@ -10,7 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 // ============================================================
 
 const getHeaders = () => {
-  const token = localStorage.getItem('acai_access_token');
+  const token = localStorage.getItem('zullya_access_token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -27,7 +27,7 @@ const handleResponse = async (res) => {
 
 // Renovar token automaticamente se expirado
 const refreshTokenIfNeeded = async () => {
-  const refresh = localStorage.getItem('acai_refresh_token');
+  const refresh = localStorage.getItem('zullya_refresh_token');
   if (!refresh) return false;
   try {
     const res = await fetch(`${API_URL}/auth/refresh`, {
@@ -37,8 +37,8 @@ const refreshTokenIfNeeded = async () => {
     });
     if (!res.ok) return false;
     const data = await res.json();
-    localStorage.setItem('acai_access_token', data.dados.access_token);
-    localStorage.setItem('acai_refresh_token', data.dados.refresh_token);
+    localStorage.setItem('zullya_access_token', data.dados.access_token);
+    localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
     return true;
   } catch {
     return false;
@@ -62,9 +62,9 @@ const apiFetch = async (path, options = {}) => {
       }).then(handleResponse);
     }
     // Sessão expirada — limpar e redirecionar
-    localStorage.removeItem('acai_access_token');
-    localStorage.removeItem('acai_refresh_token');
-    localStorage.removeItem('acai_auth');
+    localStorage.removeItem('zullya_access_token');
+    localStorage.removeItem('zullya_refresh_token');
+    localStorage.removeItem('zullya_auth');
     window.location.href = '/login';
     throw new Error('Sessão expirada.');
   }
@@ -86,8 +86,8 @@ export const authApi = {
       body: JSON.stringify({ email, senha }),
     });
     // Salvar tokens
-    localStorage.setItem('acai_access_token', data.dados.access_token);
-    localStorage.setItem('acai_refresh_token', data.dados.refresh_token);
+    localStorage.setItem('zullya_access_token', data.dados.access_token);
+    localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
     return data.dados;
   },
 
@@ -99,8 +99,8 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    localStorage.setItem('acai_access_token', data.dados.access_token);
-    localStorage.setItem('acai_refresh_token', data.dados.refresh_token);
+    localStorage.setItem('zullya_access_token', data.dados.access_token);
+    localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
     return data.dados;
   },
 
@@ -141,9 +141,9 @@ export const authApi = {
     } catch {
       // Ignorar erros de logout
     } finally {
-      localStorage.removeItem('acai_access_token');
-      localStorage.removeItem('acai_refresh_token');
-      localStorage.removeItem('acai_auth');
+      localStorage.removeItem('zullya_access_token');
+      localStorage.removeItem('zullya_refresh_token');
+      localStorage.removeItem('zullya_auth');
     }
   },
 };

@@ -1,7 +1,7 @@
 {
-  "name": "acai-erp-backend",
+  "name": "zullya-erp-backend",
   "version": "1.0.0",
-  "description": "Açaí ERP SaaS - Backend API Multi-tenant",
+  "description": "Zullya ERP - Backend API Multi-tenant",
   "main": "src/app.js",
   "type": "commonjs",
   "scripts": {

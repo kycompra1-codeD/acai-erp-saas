@@ -20,7 +20,7 @@ const STATIC_CATEGORIES = [
   { key: 'sobremesa', label: '🍩 Sobremesas' },
 ];
 
-const CAT_STORAGE_KEY = 'acai_product_categories';
+const CAT_STORAGE_KEY = 'zullya_product_categories';
 
 function useDynamicCategories() {
   const [cats, setCats] = useState(() => {
@@ -61,7 +61,7 @@ function fmt(v) {
   return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 }
 
-const TARE_STORAGE_KEY = 'acai-tare-presets';
+const TARE_STORAGE_KEY = 'zullya-tare-presets';
 
 function useTarePresets() {
   const [presets, setPresets] = useState(() => {

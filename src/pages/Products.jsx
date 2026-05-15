@@ -1981,7 +1981,7 @@ export default function Products() {
                       <div className="p-8 rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center space-y-6">
                         <div className="w-48 h-48 bg-white p-4 rounded-xl shadow-inner flex items-center justify-center">
                           <QRCodeSVG 
-                            value={`https://acai-erp.com.br/product/${form.id || form.sku || 'new'}`} 
+                            value={`https://zullya.com.br/product/${form.id || form.sku || 'new'}`} 
                             size={160}
                             bgColor={"#ffffff"}
                             fgColor={"#000000"}

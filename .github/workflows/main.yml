@@ -1,4 +1,4 @@
-name: CI/CD - Açaí ERP SaaS
+name: CI/CD - Zullya ERP
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
       run: npm run build
 
     - name: Build Docker image (verificação)
-      run: docker build -t acai-erp-frontend:test .
+      run: docker build -t zullya-erp-frontend:test .
 
   deploy:
     needs: build-and-test
@@ -48,7 +48,7 @@ jobs:
         port: 22
         script: |
           set -e
-          cd /opt/acai-erp
+          cd /opt/zullya-erp
 
           echo "📥 Atualizando código..."
           git pull origin main

@@ -1,11 +1,11 @@
 # ============================================================
-# Açaí ERP SaaS - Docker Compose (Produção / VPS Hostinger)
+# Zullya ERP - Docker Compose (Produção / VPS Hostinger)
 # Domínio: zullya.com.br | API: api.zullya.com.br
 # SSL automático via Traefik + Let's Encrypt (já configurado)
 # ============================================================
 
 networks:
-  acai-net:
+  zullya-net:
     driver: bridge
 
 services:
@@ -15,22 +15,22 @@ services:
   # ============================================================
   postgres:
     image: postgres:16-alpine
-    container_name: acai-postgres
+    container_name: zullya-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-acai_erp}
-      POSTGRES_USER: ${DB_USER:-acai_erp_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-acai_senha_local}
+      POSTGRES_DB: ${DB_NAME:-zullya_erp}
+      POSTGRES_USER: ${DB_USER:-zullya_erp_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zullya_senha_local}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
-      - acai-net
+      - zullya-net
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-acai_erp_user} -d ${DB_NAME:-acai_erp}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zullya_erp_user} -d ${DB_NAME:-zullya_erp}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,13 +40,13 @@ services:
   # ============================================================
   redis:
     image: redis:7-alpine
-    container_name: acai-redis
+    container_name: zullya-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     networks:
-      - acai-net
+      - zullya-net
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
@@ -62,16 +62,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: acai-backend
+    container_name: zullya-backend
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3001
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-acai_erp}
-      DB_USER: ${DB_USER:-acai_erp_user}
-      DB_PASSWORD: ${DB_PASSWORD:-acai_senha_local}
+      DB_NAME: ${DB_NAME:-zullya_erp}
+      DB_USER: ${DB_USER:-zullya_erp_user}
+      DB_PASSWORD: ${DB_PASSWORD:-zullya_senha_local}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
@@ -84,7 +84,7 @@ services:
       RRPAY_API_KEY: ${RRPAY_API_KEY:-}
       RRPAY_BASE_URL: ${RRPAY_BASE_URL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      EMAIL_FROM: ${EMAIL_FROM:-Açaí ERP <noreply@zullya.com.br>}
+      EMAIL_FROM: ${EMAIL_FROM:-Zullya ERP <noreply@zullya.com.br>}
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,14 +93,14 @@ services:
     ports:
       - "127.0.0.1:3001:3001"
     networks:
-      - acai-net
+      - zullya-net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=acai-erp_acai-net"
-      - "traefik.http.routers.acai-api.rule=Host(`api.zullya.com.br`)"
-      - "traefik.http.routers.acai-api.entrypoints=websecure"
-      - "traefik.http.routers.acai-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.acai-api.loadbalancer.server.port=3001"
+      - "traefik.docker.network=zullya-erp_zullya-net"
+      - "traefik.http.routers.zullya-api.rule=Host(`api.zullya.com.br`)"
+      - "traefik.http.routers.zullya-api.entrypoints=websecure"
+      - "traefik.http.routers.zullya-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.zullya-api.loadbalancer.server.port=3001"
     logging:
       driver: "json-file"
       options:
@@ -116,27 +116,27 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://api.zullya.com.br/api}
-    container_name: acai-frontend
+    container_name: zullya-frontend
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:80"
     networks:
-      - acai-net
+      - zullya-net
     depends_on:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=acai-erp_acai-net"
+      - "traefik.docker.network=zullya-erp_zullya-net"
       # Rota principal: zullya.com.br e www.zullya.com.br
-      - "traefik.http.routers.acai-frontend.rule=Host(`zullya.com.br`) || Host(`www.zullya.com.br`)"
-      - "traefik.http.routers.acai-frontend.entrypoints=websecure"
-      - "traefik.http.routers.acai-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.acai-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.zullya-frontend.rule=Host(`zullya.com.br`) || Host(`www.zullya.com.br`)"
+      - "traefik.http.routers.zullya-frontend.entrypoints=websecure"
+      - "traefik.http.routers.zullya-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.zullya-frontend.loadbalancer.server.port=80"
       # Redirecionar www → sem www
       - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.zullya\\.com\\.br/(.*)"
       - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://zullya.com.br/$${1}"
       - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
-      - "traefik.http.routers.acai-frontend.middlewares=www-redirect"
+      - "traefik.http.routers.zullya-frontend.middlewares=www-redirect"
     logging:
       driver: "json-file"
       options:
@@ -148,7 +148,7 @@ services:
   # ============================================================
   portainer:
     image: portainer/portainer-ce:latest
-    container_name: acai-portainer
+    container_name: zullya-portainer
     restart: unless-stopped
     profiles:
       - production
@@ -158,14 +158,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     networks:
-      - acai-net
+      - zullya-net
 
   # ============================================================
   # BACKUP AUTOMÁTICO - PostgreSQL para Nuvem
   # ============================================================
   pg-backup:
     image: eeshugerman/postgres-backup-s3:16
-    container_name: acai-backup
+    container_name: zullya-backup
     restart: unless-stopped
     profiles:
       - production
@@ -175,26 +175,26 @@ services:
       PASSPHRASE: ${BACKUP_ENCRYPTION_PASSPHRASE:-}
       S3_REGION: ${BACKUP_S3_REGION:-sa-east-1}
       S3_BUCKET: ${BACKUP_S3_BUCKET:-}
-      S3_PREFIX: acai-erp-backups
+      S3_PREFIX: zullya-erp-backups
       S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
       AWS_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY:-}
       AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_KEY:-}
       POSTGRES_HOST: postgres
-      POSTGRES_DATABASE: ${DB_NAME:-acai_erp}
-      POSTGRES_USER: ${DB_USER:-acai_erp_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-acai_senha_local}
+      POSTGRES_DATABASE: ${DB_NAME:-zullya_erp}
+      POSTGRES_USER: ${DB_USER:-zullya_erp_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zullya_senha_local}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - acai-net
+      - zullya-net
 
   # ============================================================
   # MONITORAMENTO - Uptime Kuma
   # ============================================================
   uptime-kuma:
     image: louislam/uptime-kuma:latest
-    container_name: acai-monitor
+    container_name: zullya-monitor
     restart: unless-stopped
     profiles:
       - production
@@ -203,7 +203,7 @@ services:
     volumes:
       - uptime_kuma_data:/app/data
     networks:
-      - acai-net
+      - zullya-net
 
 # ============================================================
 # VOLUMES

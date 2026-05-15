@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat \"C:/tmp/vps-deploy/deploy.js\")",
+      "Bash(echo \"copia: $?\")",
+      "Bash(cat \"C:/tmp/vps-deploy/fix.js\")",
+      "Bash(node fix.js)",
+      "Bash(cat \"C:/tmp/vps-deploy/fix2.js\")",
+      "Bash(node fix2.js)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(cat \"C:/tmp/vps-deploy/setup-github.js\")",
+      "Bash(node setup-github.js)"
+    ]
+  }
+}

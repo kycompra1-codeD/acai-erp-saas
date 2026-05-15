@@ -13,7 +13,7 @@ export function DashboardLayout({ children }) {
   // Auto-login demo quando não há sessão (garante sidebar sempre visível)
   useEffect(() => {
     if (!user) {
-      login('admin@acai-erp-saas.com.br', 'admin123');
+      login('admin@zullya.com.br', 'admin123');
     }
   }, [user, login]);
 

@@ -57,7 +57,7 @@ export default function Purchases() {
   }, [getDashboardStats]);
 
   const loadOrders = useCallback(async () => {
-    const token = localStorage.getItem('acai_access_token');
+    const token = localStorage.getItem('zullya_access_token');
     if (!token) return;
     setLoadingOrders(true);
     try {

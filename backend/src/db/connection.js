@@ -7,8 +7,8 @@ const { createClient } = require('redis');
 const pgPool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'acai_erp',
-  user: process.env.DB_USER || 'acai_erp_user',
+  database: process.env.DB_NAME || 'zullya_erp',
+  user: process.env.DB_USER || 'zullya_erp_user',
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,

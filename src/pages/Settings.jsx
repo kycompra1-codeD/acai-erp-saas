@@ -447,11 +447,11 @@ export default function Settings() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="form-group">
                           <label className="form-label flex items-center gap-2"><Globe size={13} /> Website</label>
-                          <input className="input-field" value={companyForm.website} onChange={e => setCompanyForm({...companyForm, website: e.target.value})} placeholder="https://acaierp.com.br" />
+                          <input className="input-field" value={companyForm.website} onChange={e => setCompanyForm({...companyForm, website: e.target.value})} placeholder="https://zullya.com.br" />
                         </div>
                         <div className="form-group">
                           <label className="form-label flex items-center gap-2"><Link2 size={13} /> Instagram</label>
-                          <input className="input-field" value={companyForm.instagram} onChange={e => setCompanyForm({...companyForm, instagram: e.target.value})} placeholder="@acaierp_saas" />
+                          <input className="input-field" value={companyForm.instagram} onChange={e => setCompanyForm({...companyForm, instagram: e.target.value})} placeholder="@zullya_erp" />
                         </div>
                         <div className="form-group">
                           <label className="form-label flex items-center gap-2"><span style={{fontSize:13}}>🎵</span> TikTok</label>
