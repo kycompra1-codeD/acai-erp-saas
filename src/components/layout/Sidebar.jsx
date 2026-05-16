@@ -85,7 +85,7 @@ export function Sidebar({ open, onClose }) {
               <Grape size={20} color="#fff" />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.02em' }}>Açaí ERP SaaS</div>
+              <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.02em' }}>Zullya ERP</div>
               <div style={{ fontSize: 10, color: 'var(--primary-light)', fontWeight: 700, letterSpacing: 1 }}>SaaS PRO</div>
             </div>
           </div>

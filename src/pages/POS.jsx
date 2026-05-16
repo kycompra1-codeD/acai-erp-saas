@@ -54,8 +54,7 @@ function useDynamicCategories() {
 const ORDER_TYPES = ['balcão', 'delivery', 'retirada'];
 const PAYMENTS = ['credito', 'debito', 'pix', 'dinheiro'];
 
-// Preço por kg para açaís vendidos por peso (R$/kg)
-const ACAI_PRICE_PER_KG = 45.00;
+const DEFAULT_PRICE_PER_KG = 45.00;
 
 function fmt(v) {
   return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -521,7 +520,7 @@ export default function POS() {
   const [showPayModal, setShowPayModal] = useState(false);
   const [success, setSuccess] = useState(null);
   const [showScale, setShowScale] = useState(false);
-  const [pricePerKg, setPricePerKg] = useState(ACAI_PRICE_PER_KG);
+  const [pricePerKg, setPricePerKg] = useState(DEFAULT_PRICE_PER_KG);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [pixQrCodeString, setPixQrCodeString] = useState('');
@@ -552,7 +551,7 @@ export default function POS() {
 
   // Preço por kg das configurações
   useEffect(() => {
-    if (settings?.acaiPricePerKg) setPricePerKg(settings.acaiPricePerKg);
+    if (settings?.productPricePerKg) setPricePerKg(settings.productPricePerKg);
   }, [settings]);
 
   const activeProducts = useMemo(() =>
@@ -595,7 +594,7 @@ export default function POS() {
   // Adiciona item por peso da balança
   const handleWeightConfirm = useCallback((kg, value) => {
     const weightItem = {
-      productId: `acai-peso-${Date.now()}`,
+      productId: `peso-${Date.now()}`,
       name: `🍇 Açaí (${kg.toFixed(3)} kg)`,
       price: value,
       quantity: 1,

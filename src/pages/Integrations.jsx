@@ -1,5 +1,5 @@
 // ============================================================
-// HUB DE INTEGRAÇÃO — Açaí ERP SaaS
+// HUB DE INTEGRAÇÃO — Zullya ERP
 // ============================================================
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -264,7 +264,7 @@ export default function Integrations() {
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ch.category}</div>
                     </div>
                   </div>
-                  <p className="text-xs text-muted">Venda seus produtos no {ch.name} e centralize tudo no Açaí ERP SaaS.</p>
+                  <p className="text-xs text-muted">Venda seus produtos no {ch.name} e centralize tudo no Zullya ERP.</p>
                   <button className="btn btn-primary w-full" onClick={() => setConfigModal(ch)}>
                     <Plus size={16} /> Instalar
                   </button>

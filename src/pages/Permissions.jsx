@@ -27,10 +27,18 @@ const ROLE_PRESETS = {
   atendente: { label: 'Atendente',            color: '#ec4899', modules: ['dashboard','pos','orders','customers'] },
 };
 
-const PERM_STORAGE_KEY = 'acai_employee_permissions';
+const PERM_STORAGE_KEY = 'zullya_employee_permissions';
+const PERM_STORAGE_KEY_LEGACY = 'acai_employee_permissions';
 
 function loadPerms() {
-  try { return JSON.parse(localStorage.getItem(PERM_STORAGE_KEY) || '{}'); } catch { return {}; }
+  try {
+    const legacy = localStorage.getItem(PERM_STORAGE_KEY_LEGACY);
+    if (legacy) {
+      localStorage.setItem(PERM_STORAGE_KEY, legacy);
+      localStorage.removeItem(PERM_STORAGE_KEY_LEGACY);
+    }
+    return JSON.parse(localStorage.getItem(PERM_STORAGE_KEY) || '{}');
+  } catch { return {}; }
 }
 function savePerms(perms) {
   try { localStorage.setItem(PERM_STORAGE_KEY, JSON.stringify(perms)); } catch {}

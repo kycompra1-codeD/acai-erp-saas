@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Açaí ERP SaaS - PDV e Vendas', () => {
+test.describe('Zullya ERP - PDV e Vendas', () => {
   
   test('Fluxo completo: Adicionar item, pagar com dinheiro e aprovar', async ({ page }) => {
     // 1. Acessar o sistema e ir para o PDV

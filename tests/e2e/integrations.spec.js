@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Açaí ERP SaaS - Hub de Integração', () => {
+test.describe('Zullya ERP - Hub de Integração', () => {
   
   test.beforeEach(async ({ page }) => {
     // Acessar a página de integrações

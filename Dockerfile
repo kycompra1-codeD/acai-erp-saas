@@ -25,7 +25,7 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 # Metadados da imagem
-LABEL maintainer="Açaí ERP Team"
+LABEL maintainer="Zullya ERP Team"
 LABEL version="1.0.0"
 
 # Copiar os arquivos estáticos do estágio de build para o diretório do Nginx

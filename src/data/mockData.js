@@ -1,5 +1,5 @@
 // ============================================================
-// MOCK DATA — Açaí ERP SaaS
+// MOCK DATA — Zullya ERP
 // Dados de demonstração iniciais
 // ============================================================
 
@@ -24,7 +24,7 @@ export function getFreshMockData() {
       id: 'comp-2', name: 'Zullya ERP - Shopping', cnpj: '00.000.000/0002-99', address: 'Av. Paulista, 1000 — Shopping Premium Center', color: '#F472B6',
       phone: '(11) 98888-1111', email: 'shopping@zullya.com.br', website: 'https://zullya.com.br',
       cep: '01310-100', street: 'Av. Paulista', number: '1000', complement: 'Loja 45', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP',
-      instagram: '@acaierpsaasshopping', tiktok: '', youtube: '',
+      instagram: '@zullya_erp', tiktok: '', youtube: '',
       hours_seg: 'aberto', hours_seg_open: '10:00', hours_seg_close: '22:00',
       hours_ter: 'aberto', hours_ter_open: '10:00', hours_ter_close: '22:00',
       hours_qua: 'aberto', hours_qua_open: '10:00', hours_qua_close: '22:00',
@@ -38,12 +38,12 @@ export function getFreshMockData() {
   const initialProducts = [
     // Açaís
     { 
-      id: 'p1', companyId: 'comp-1', name: 'Açaí 300ml', category: 'acai', brand: 'Açaí ERP SaaS', price: 14.90, promotionalPrice: 12.90, cost: 5.50, averageCost: 5.25, markup: '170.9', 
+      id: 'p1', companyId: 'comp-1', name: 'Açaí 300ml', category: 'acai', brand: 'Zullya ERP', price: 14.90, promotionalPrice: 12.90, cost: 5.50, averageCost: 5.25, markup: '170.9', 
       stock: 80, minStock: 20, maxStock: 200, stockNotification: true, stockLocation: 'Corredor A - Prateleira 2', preparationDays: 1, unit: 'pote', active: true, 
       identityType: 'image', image: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=300&h=300&fit=crop', emoji: '🍇', description: 'Açaí puro natural 300ml',
       sku: 'AC-300', ean: '7891234567890', eanTributavel: '7891234567890', ncm: '2106.90.90', cest: '17.111.00', weight: '0.350', weightNet: '0.300', packagingType: 'pacote', width: '10', height: '12', length: '10', itemsPerBox: '1',
       ipiCode: '999', ipiFixed: '0.00', extipi: '', origin: '0',
-      videoLink: 'https://youtube.com/watch?v=acai123', slug: 'acai-puro-natural-300ml', keywords: 'açaí, natural, copo 300ml', seoTitle: 'Açaí Puro Natural 300ml | Açaí ERP SaaS', seoDescription: 'O melhor açaí natural em copo de 300ml, pronto para consumo.', richDescription: '<p>Açaí delicioso com a melhor qualidade.</p>',
+      videoLink: 'https://youtube.com/watch?v=acai123', slug: 'acai-puro-natural-300ml', keywords: 'açaí, natural, copo 300ml', seoTitle: 'Açaí Puro Natural 300ml | Zullya ERP', seoDescription: 'O melhor açaí natural em copo de 300ml, pronto para consumo.', richDescription: '<p>Açaí delicioso com a melhor qualidade.</p>',
       tags: ['Destaque', 'Verão', 'Vegano'],
       attributes: [
         { name: 'Sabor', value: 'Tradicional' },
@@ -58,7 +58,7 @@ export function getFreshMockData() {
         { channel: 'iFood', id: 'ACAI300IF', status: 'ativo' }
       ],
       mappings: { mercado_livre: 'MLB123', ifood: 'ACAI300IF', ifood_price: '18.90' },
-      suppliers: [ { name: 'Açaí ERP SaaS Distribuidora', code: 'FORN-001' } ],
+      suppliers: [ { name: 'Zullya Distribuidora', code: 'FORN-001' } ],
       internalNotes: 'O pote costuma amassar se empilhar mais de 10.',
       variations: [
         { name: 'Tradicional', price: '0', sku: 'AC-300-TRAD' },
@@ -104,7 +104,7 @@ export function getFreshMockData() {
   ];
 
   const initialInventory = [
-    { id: 'i1', companyId: 'comp-1', name: 'Polpa de Açaí', unit: 'kg', quantity: 45, minQuantity: 20, cost: 12.50, supplier: 'Açaí ERP SaaS', lastUpdate: new Date().toISOString() },
+    { id: 'i1', companyId: 'comp-1', name: 'Polpa de Açaí', unit: 'kg', quantity: 45, minQuantity: 20, cost: 12.50, supplier: 'Zullya ERP', lastUpdate: new Date().toISOString() },
     { id: 'i2', companyId: 'comp-1', name: 'Granola', unit: 'kg', quantity: 8, minQuantity: 10, cost: 8.00, supplier: 'NaturaVida', lastUpdate: new Date().toISOString() },
     { id: 'i3', companyId: 'comp-1', name: 'Leite em Pó', unit: 'kg', quantity: 15, minQuantity: 5, cost: 15.00, supplier: 'Nestlé', lastUpdate: new Date().toISOString() },
     { id: 'i4', companyId: 'comp-1', name: 'Mel', unit: 'litro', quantity: 3, minQuantity: 5, cost: 25.00, supplier: 'MelPuro', lastUpdate: new Date().toISOString() },
@@ -167,7 +167,7 @@ export function getFreshMockData() {
       loyaltyRewardAt: 100,
       // Impressão
       printLogo: null,
-      printHeader: 'Bem-vindo ao Açaí ERP SaaS!',
+      printHeader: 'Bem-vindo ao Zullya ERP!',
       printFooter: 'Obrigado pela preferência! Volte sempre! 🍇',
       printLoyaltyMsg: 'Acumule pontos e ganhe recompensas exclusivas!',
       printCupomWidth: '80mm',
@@ -216,14 +216,14 @@ export function getFreshMockData() {
   };
 
   const initialEmployees = [
-    { id: 'e1', companyId: 'comp-1', name: 'João Silva', cpf: '123.456.789-00', role: 'admin', jobTitle: 'Gerente', shift: 'manhã', salary: 2800.00, phone: '(11) 99001-1111', email: 'joao@acaierpsaas.com.br', hiredAt: subDays(new Date(), 365).toISOString(), status: 'ativo', notes: '' },
-    { id: 'e2', companyId: 'comp-1', name: 'Maria Caixa', cpf: '234.567.890-11', role: 'caixa', jobTitle: 'Operadora de Caixa', shift: 'manhã', salary: 1800.00, phone: '(11) 99002-2222', email: 'maria@acaierpsaas.com.br', hiredAt: subDays(new Date(), 180).toISOString(), status: 'ativo', notes: '' },
-    { id: 'e3', companyId: 'comp-1', name: 'Pedro Cozinha', cpf: '345.678.901-22', role: 'producao', jobTitle: 'Produtor', shift: 'tarde', salary: 1600.00, phone: '(11) 99003-3333', email: 'pedro@acaierpsaas.com.br', hiredAt: subDays(new Date(), 90).toISOString(), status: 'ativo', notes: '' },
-    { id: 'e4', companyId: 'comp-1', name: 'Ana Atendente', cpf: '456.789.012-33', role: 'caixa', jobTitle: 'Atendente', shift: 'noite', salary: 1600.00, phone: '(11) 99004-4444', email: 'ana@acaierpsaas.com.br', hiredAt: subDays(new Date(), 45).toISOString(), status: 'férias', notes: 'Retorna dia 10/05' },
+    { id: 'e1', companyId: 'comp-1', name: 'João Silva', cpf: '123.456.789-00', role: 'admin', jobTitle: 'Gerente', shift: 'manhã', salary: 2800.00, phone: '(11) 99001-1111', email: 'joao@zullya.com.br', hiredAt: subDays(new Date(), 365).toISOString(), status: 'ativo', notes: '' },
+    { id: 'e2', companyId: 'comp-1', name: 'Maria Caixa', cpf: '234.567.890-11', role: 'caixa', jobTitle: 'Operadora de Caixa', shift: 'manhã', salary: 1800.00, phone: '(11) 99002-2222', email: 'maria@zullya.com.br', hiredAt: subDays(new Date(), 180).toISOString(), status: 'ativo', notes: '' },
+    { id: 'e3', companyId: 'comp-1', name: 'Pedro Cozinha', cpf: '345.678.901-22', role: 'producao', jobTitle: 'Produtor', shift: 'tarde', salary: 1600.00, phone: '(11) 99003-3333', email: 'pedro@zullya.com.br', hiredAt: subDays(new Date(), 90).toISOString(), status: 'ativo', notes: '' },
+    { id: 'e4', companyId: 'comp-1', name: 'Ana Atendente', cpf: '456.789.012-33', role: 'caixa', jobTitle: 'Atendente', shift: 'noite', salary: 1600.00, phone: '(11) 99004-4444', email: 'ana@zullya.com.br', hiredAt: subDays(new Date(), 45).toISOString(), status: 'férias', notes: 'Retorna dia 10/05' },
   ];
 
   const initialSuppliers = [
-    { id: 's1', companyId: 'comp-1', name: 'Açaí ERP SaaS Distribuidora', tradingName: 'Açaí ERP SaaS Atacado', personType: 'pj', document: '10.000.001/0001-01', contact: 'Carlos Mendes', phone: '(91) 98001-0001', email: 'vendas@acaierpsaas-dist.com.br', city: 'Belém', state: 'PA', category: 'Polpas e Açaí', products: 'Polpa de Açaí, Polpa de Cupuaçu', paymentTerms: '30 dias', rating: 5, status: 'ativo', lastOrder: subDays(new Date(), 5).toISOString(), roles: ['fornecedor'], taxpayerType: '1', ie: '123456789' },
+    { id: 's1', companyId: 'comp-1', name: 'Zullya Distribuidora', tradingName: 'Zullya Atacado', personType: 'pj', document: '10.000.001/0001-01', contact: 'Carlos Mendes', phone: '(91) 98001-0001', email: 'vendas@zullya.com.br', city: 'Belém', state: 'PA', category: 'Polpas e Açaí', products: 'Polpa de Açaí, Polpa de Cupuaçu', paymentTerms: '30 dias', rating: 5, status: 'ativo', lastOrder: subDays(new Date(), 5).toISOString(), roles: ['fornecedor'], taxpayerType: '1', ie: '123456789' },
     { id: 's2', companyId: 'comp-1', name: 'NaturaVida', tradingName: 'NaturaVida Grãos', personType: 'pj', document: '10.000.002/0001-02', contact: 'Fernanda Lima', phone: '(11) 97002-0002', email: 'pedidos@naturavida.com.br', city: 'São Paulo', state: 'SP', category: 'Grãos e Cereais', products: 'Granola, Coco Ralado, Aveia', paymentTerms: '15 dias', rating: 4, status: 'ativo', lastOrder: subDays(new Date(), 12).toISOString(), roles: ['fornecedor'], taxpayerType: '1' },
     { id: 's3', companyId: 'comp-1', name: 'HortiFruti Central', personType: 'pj', document: '10.000.003/0001-03', contact: 'Roberto Costa', phone: '(11) 96003-0003', email: 'hortifruti@central.com.br', city: 'Campinas', state: 'SP', category: 'Frutas e Verduras', products: 'Morango, Banana, Abacaxi, Kiwi', paymentTerms: 'à vista', rating: 4, status: 'ativo', lastOrder: subDays(new Date(), 2).toISOString(), roles: ['fornecedor'] },
     { id: 's4', companyId: 'comp-1', name: 'Embalagens SP', personType: 'pj', document: '10.000.004/0001-04', contact: 'Patrícia Souza', phone: '(11) 95004-0004', email: 'embalagens@sp.com.br', city: 'São Paulo', state: 'SP', category: 'Embalagens', products: 'Potes 300ml, 500ml, 700ml, Colheres, Canudos', paymentTerms: '30 dias', rating: 3, status: 'ativo', lastOrder: subDays(new Date(), 20).toISOString(), roles: ['fornecedor'] },
@@ -232,7 +232,7 @@ export function getFreshMockData() {
 
   const initialFinanceEntries = [
     { id: 'f1', companyId: 'comp-1', type: 'receita', category: 'Vendas PDV', description: 'Vendas do dia', amount: 1240.50, date: subDays(new Date(), 0).toISOString(), paymentMethod: 'pix', status: 'pago', recurring: false },
-    { id: 'f2', companyId: 'comp-1', type: 'despesa', category: 'Fornecedores', description: 'Compra polpa açaí — Açaí ERP SaaS Dist.', amount: 562.50, date: subDays(new Date(), 1).toISOString(), paymentMethod: 'transferência', status: 'pago', recurring: false },
+    { id: 'f2', companyId: 'comp-1', type: 'despesa', category: 'Fornecedores', description: 'Compra polpa açaí — Zullya Dist.', amount: 562.50, date: subDays(new Date(), 1).toISOString(), paymentMethod: 'transferência', status: 'pago', recurring: false },
     { id: 'f3', companyId: 'comp-1', type: 'despesa', category: 'Salários', description: 'Pagamento salários Abril', amount: 7800.00, date: subDays(new Date(), 3).toISOString(), paymentMethod: 'transferência', status: 'pago', recurring: true },
     { id: 'f4', companyId: 'comp-1', type: 'receita', category: 'Vendas PDV', description: 'Vendas do dia', amount: 980.00, date: subDays(new Date(), 1).toISOString(), paymentMethod: 'misto', status: 'pago', recurring: false },
     { id: 'f5', companyId: 'comp-1', type: 'despesa', category: 'Aluguel', description: 'Aluguel do ponto comercial', amount: 2500.00, date: subDays(new Date(), 5).toISOString(), paymentMethod: 'boleto', status: 'pago', recurring: true },

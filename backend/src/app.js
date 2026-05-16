@@ -86,7 +86,7 @@ const relatoriosRoutes = require('./routes/relatorios');
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    servico: 'Açaí ERP Backend',
+    servico: 'Zullya ERP Backend',
     versao: '1.0.0',
     timestamp: new Date().toISOString(),
     ambiente: process.env.NODE_ENV,
@@ -132,7 +132,7 @@ app.use((err, req, res, next) => {
 // Inicialização
 // ============================================================
 const start = async () => {
-  console.log('🚀 Iniciando Açaí ERP Backend...');
+  console.log('🚀 Iniciando Zullya ERP Backend...');
 
   // Conectar Redis (opcional — não trava se indisponível)
   await connectRedis();
@@ -147,7 +147,7 @@ const start = async () => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('╔═══════════════════════════════════════╗');
-    console.log('║   🍇 Açaí ERP Backend - Online!       ║');
+    console.log('║   ⚡ Zullya ERP Backend - Online!      ║');
     console.log(`║   Porta: ${PORT}                          ║`);
     console.log(`║   Ambiente: ${process.env.NODE_ENV || 'development'}               ║`);
     console.log('╚═══════════════════════════════════════╝');

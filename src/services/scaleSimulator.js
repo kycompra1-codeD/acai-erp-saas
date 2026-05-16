@@ -1,5 +1,5 @@
 // ============================================================
-// SCALE SIMULATOR — Açaí ERP SaaS
+// SCALE SIMULATOR — Zullya ERP
 // Simula uma balança digital emitindo peso via EventBus.
 // Em produção: substituir por serialport RS232/USB + TCP/IP.
 //

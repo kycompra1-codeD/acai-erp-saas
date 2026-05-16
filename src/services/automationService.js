@@ -1,5 +1,5 @@
 /**
- * AUTOMATION SERVICE — Açaí ERP SaaS
+ * AUTOMATION SERVICE — Zullya ERP
  * Motor de automação No-Code para regras de negócio.
  * Permite que o usuário crie fluxos como:
  * "SE estoque < 10 ENTÃO enviar alerta via WhatsApp"

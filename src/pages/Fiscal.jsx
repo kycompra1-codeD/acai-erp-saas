@@ -1,5 +1,5 @@
 // ============================================================
-// FISCAL — Açaí ERP SaaS
+// FISCAL — Zullya ERP
 // ============================================================
 import { useState } from 'react';
 import {
@@ -419,7 +419,7 @@ export default function Fiscal() {
             
             <div className="p-8 text-slate-800 font-mono text-sm leading-relaxed overflow-y-auto max-h-[70vh]">
               <div className="text-center border-b border-dashed border-slate-300 pb-4 mb-4">
-                <div className="text-lg font-black tracking-tighter">Açaí ERP SaaS Premium</div>
+                <div className="text-lg font-black tracking-tighter">Zullya ERP Premium</div>
                 <div className="text-xs">CNPJ: 00.000.000/0001-91</div>
                 <div className="text-xs uppercase">Rua do Sucesso, 777 - Digital City, SP</div>
               </div>

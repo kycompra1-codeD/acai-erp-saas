@@ -31,7 +31,7 @@ export function TopBar({ onMenuClick, pathname }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef(null);
 
-  const title = pageTitles[pathname] ?? 'Açaí ERP SaaS';
+  const title = pageTitles[pathname] ?? 'Zullya ERP';
   const lowStockItems = inventory.filter(i => i.quantity <= i.minQuantity);
   const pendingOrdersList = orders.filter(o => o.status === 'pending');
   

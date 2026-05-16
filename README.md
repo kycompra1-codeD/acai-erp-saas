@@ -1,6 +1,6 @@
-# Açaí ERP SaaS — Sistema de Gestão Completo
+# Zullya ERP — Sistema de Gestão Completo
 
-Sistema moderno de gestão para lojas de açaí e alimentação, focado em performance, design premium e escalabilidade SaaS.
+Sistema moderno de gestão para negócios brasileiros, focado em performance, design premium e escalabilidade SaaS.
 
 ## 🚀 Como Iniciar
 

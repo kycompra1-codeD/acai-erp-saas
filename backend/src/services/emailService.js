@@ -10,7 +10,7 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM = process.env.EMAIL_FROM || 'Açaí ERP <noreply@zullya.com.br>';
+const FROM = process.env.EMAIL_FROM || 'Zullya ERP <noreply@zullya.com.br>';
 const APP_URL = process.env.FRONTEND_URL || 'https://zullya.com.br';
 
 async function enviar({ to, subject, html }) {
@@ -46,7 +46,7 @@ function layoutBase(content) {
   .divider{height:1px;background:#2a2a4a;margin:24px 0}
   .tag{display:inline-block;background:#7c3aed22;border:1px solid #7c3aed55;color:#a78bfa;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
 </style></head>
-<body><div class="wrap">${content}<div class="footer">© 2025 Açaí ERP SaaS · <a href="${APP_URL}" style="color:#7c3aed;text-decoration:none">zullya.com.br</a></div></div></body>
+<body><div class="wrap">${content}<div class="footer">© 2025 Zullya ERP · <a href="${APP_URL}" style="color:#7c3aed;text-decoration:none">zullya.com.br</a></div></div></body>
 </html>`;
 }
 
@@ -54,12 +54,12 @@ function layoutBase(content) {
 async function enviarBoasVindas({ email, nome, nomeEmpresa }) {
   const html = layoutBase(`
     <div class="header">
-      <h1>🍇 Açaí ERP</h1>
+      <h1>⚡ Zullya ERP</h1>
       <p>Bem-vindo ao sistema</p>
     </div>
     <div class="body">
       <p>Olá, <strong>${nome}</strong>!</p>
-      <p>Sua empresa <strong>${nomeEmpresa}</strong> foi criada com sucesso no Açaí ERP. Você tem <strong>14 dias gratuitos</strong> para explorar todas as funcionalidades.</p>
+      <p>Sua empresa <strong>${nomeEmpresa}</strong> foi criada com sucesso no Zullya ERP. Você tem <strong>14 dias gratuitos</strong> para explorar todas as funcionalidades.</p>
       <p style="text-align:center">
         <a class="btn" href="${APP_URL}">Acessar o sistema</a>
       </p>
@@ -75,7 +75,7 @@ async function enviarBoasVindas({ email, nome, nomeEmpresa }) {
 
   return enviar({
     to: email,
-    subject: `Bem-vindo ao Açaí ERP, ${nome}! 🍇`,
+    subject: `Bem-vindo ao Zullya ERP, ${nome}!`,
     html,
   });
 }
@@ -86,7 +86,7 @@ async function enviarRedefinicaoSenha({ email, nome, token }) {
   const html = layoutBase(`
     <div class="header">
       <h1>🔐 Redefinir Senha</h1>
-      <p>Açaí ERP · Segurança de conta</p>
+      <p>Zullya ERP · Segurança de conta</p>
     </div>
     <div class="body">
       <p>Olá, <strong>${nome}</strong>!</p>
@@ -100,7 +100,7 @@ async function enviarRedefinicaoSenha({ email, nome, token }) {
 
   return enviar({
     to: email,
-    subject: 'Redefinição de senha — Açaí ERP',
+    subject: 'Redefinição de senha — Zullya ERP',
     html,
   });
 }

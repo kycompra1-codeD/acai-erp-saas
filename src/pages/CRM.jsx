@@ -1,5 +1,5 @@
 // ============================================================
-// CRM — Açaí ERP SaaS
+// CRM — Zullya ERP
 // ============================================================
 import { useState } from 'react';
 import { useApp } from '../contexts/AppContext';

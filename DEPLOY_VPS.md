@@ -1,4 +1,4 @@
-# 🚀 Guia Completo de Deploy - Açaí ERP na VPS Hostinger
+# 🚀 Guia Completo de Deploy - Zullya ERP na VPS Hostinger
 
 ## Pré-requisitos
 
@@ -144,14 +144,14 @@ docker compose logs -f postgres
 **Saída esperada** (todos com status "running"):
 ```
 NAME                STATUS
-acai-backend        running
-acai-postgres       running (healthy)
-acai-redis          running (healthy)
-acai-frontend       running
-acai-nginx-proxy    running
-acai-portainer      running
-acai-backup         running
-acai-monitor        running
+zullya-backend      running
+zullya-postgres     running (healthy)
+zullya-redis        running (healthy)
+zullya-frontend     running
+zullya-nginx-proxy  running
+zullya-portainer    running
+zullya-backup       running
+zullya-monitor      running
 ```
 
 ---
@@ -177,7 +177,7 @@ Clique em **"Proxy Hosts"** → **"Add Proxy Host"**:
 |-------|-------|
 | Domain Names | `app.seudominio.com.br` |
 | Scheme | `http` |
-| Forward Hostname/IP | `acai-frontend` |
+| Forward Hostname/IP | `zullya-frontend` |
 | Forward Port | `80` |
 | SSL Certificate | Request a new SSL Certificate (Let's Encrypt) |
 | Force SSL | ✅ Sim |
@@ -188,7 +188,7 @@ Clique em **"Proxy Hosts"** → **"Add Proxy Host"**:
 |-------|-------|
 | Domain Names | `api.seudominio.com.br` |
 | Scheme | `http` |
-| Forward Hostname/IP | `acai-backend` |
+| Forward Hostname/IP | `zullya-backend` |
 | Forward Port | `3001` |
 | SSL Certificate | Request a new SSL Certificate |
 | Force SSL | ✅ Sim |
@@ -230,7 +230,7 @@ Acesse: `http://SEU_IP_VPS:3002`
 curl https://api.seudominio.com.br/health
 
 # Resposta esperada:
-# {"status":"ok","servico":"Açaí ERP Backend","versao":"1.0.0",...}
+# {"status":"ok","servico":"Zullya ERP Backend","versao":"1.0.0",...}
 ```
 
 ---

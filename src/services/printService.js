@@ -1,4 +1,4 @@
-// PRINT SERVICE — Açaí ERP SaaS
+// PRINT SERVICE — Zullya ERP
 // Lê configurações salvas no AppContext (localStorage)
 // Impressão via window.print() em janela popup 80mm
 // ============================================================
@@ -41,7 +41,7 @@ function loadSettings() {
 function generateCouponHTML(order, overrideSettings = {}) {
   const cfg = { ...loadSettings(), ...overrideSettings };
 
-  const storeName   = cfg.storeName   || 'Açaí ERP SaaS';
+  const storeName   = cfg.storeName   || 'Zullya ERP';
   const storePhone  = cfg.storePhone  || '';
   const storeAddress= cfg.storeAddress|| '';
   const storeCnpj   = cfg.storeCnpj   || '';
@@ -331,7 +331,7 @@ class PrintService {
   ` : ''}
 
   <div class="footer">
-    Açaí ERP SaaS - Impressão de Produção
+    Zullya ERP - Impressão de Produção
   </div>
 </body>
 </html>`;

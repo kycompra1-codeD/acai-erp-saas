@@ -440,7 +440,7 @@ export default function Logistics() {
                     fontSize: 11, fontFamily: 'monospace'
                   }}>
                     <div style={{ borderBottom: '2px solid #000', paddingBottom: 8, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontWeight: 900, fontSize: 14 }}>🍇 Açaí ERP SaaS</div>
+                      <div style={{ fontWeight: 900, fontSize: 14 }}>⚡ Zullya ERP</div>
                       <Barcode size={24} />
                     </div>
                     <div style={{ fontWeight: 800, marginBottom: 2 }}>DESTINATÁRIO:</div>

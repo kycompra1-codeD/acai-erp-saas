@@ -46,7 +46,7 @@ export default function Login() {
         if (result?.demo) {
           toast.success('Bem-vindo ao modo Demo! 🍇', { icon: '🎭' });
         } else {
-          toast.success('Bem-vindo ao Açaí ERP! 🍇');
+          toast.success('Bem-vindo ao Zullya ERP!');
         }
         navigate('/');
       } else {
@@ -134,7 +134,7 @@ export default function Login() {
             <Grape size={36} color="#fff" />
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>
-            <span className="gradient-text">Açaí ERP SaaS</span>
+            <span className="gradient-text">Zullya ERP</span>
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 6 }}>
             Sistema de Gestão

@@ -1,5 +1,5 @@
 // ============================================================
-// EVENT BUS — Açaí ERP SaaS
+// EVENT BUS — Zullya ERP
 // Comunicação desacoplada entre serviços via eventos
 // Eventos: weight:update | sale:created | payment:approved
 //          print:requested | stock:updated | kitchen:refresh

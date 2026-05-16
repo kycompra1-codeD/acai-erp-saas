@@ -1,7 +1,7 @@
 export const THEME_PRESETS = {
-  acai: {
-    id: 'acai',
-    name: 'Açaí ERP SaaS',
+  zullya: {
+    id: 'zullya',
+    name: 'Zullya ERP',
     description: 'A identidade visual original e vibrante que você já conhece.',
     colors: {
       primary: '#7C3AED',

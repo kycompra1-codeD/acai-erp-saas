@@ -12,7 +12,8 @@ const DEFAULT_CATEGORIES = [
   { id: 'sobremesa', label: 'Sobremesas', emoji: '🍩', image: null, parentId: null, order: 3 },
 ];
 
-const CATEGORIES_STORAGE_KEY = 'acai_product_categories';
+const CATEGORIES_STORAGE_KEY = 'zullya_product_categories';
+const CATEGORIES_STORAGE_KEY_LEGACY = 'acai_product_categories';
 
 function fmt(v) { return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`; }
 
@@ -340,6 +341,11 @@ export default function Products() {
   const [categoriesList, setCategoriesList] = useState(() => {
     let cats = DEFAULT_CATEGORIES;
     try {
+      const legacy = localStorage.getItem(CATEGORIES_STORAGE_KEY_LEGACY);
+      if (legacy) {
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, legacy);
+        localStorage.removeItem(CATEGORIES_STORAGE_KEY_LEGACY);
+      }
       const s = localStorage.getItem(CATEGORIES_STORAGE_KEY);
       if (s) cats = JSON.parse(s);
     } catch {}

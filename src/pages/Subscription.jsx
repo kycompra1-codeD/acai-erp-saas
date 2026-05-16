@@ -58,7 +58,7 @@ const PLANS = [
     id: 'enterprise',
     name: 'Enterprise',
     price: 597,
-    description: 'Soluções customizadas para redes e franquias de açaí.',
+    description: 'Soluções customizadas para redes e franquias de negócios.',
     icon: ShieldCheck,
     color: 'var(--accent)',
     features: [
@@ -282,7 +282,7 @@ export default function Subscription() {
         <div className="glass-card overflow-hidden">
           <div className="p-8 border-b border-border bg-surface-2">
             <h4 className="text-xl font-bold">Por que o Plano Pro é o ideal?</h4>
-            <p className="text-sm text-muted">O Plano Pro Business foi desenhado por donos de açaí para donos de açaí.</p>
+            <p className="text-sm text-muted">O Plano Pro Business foi desenhado por empreendedores para empreendedores.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-border">
             {[

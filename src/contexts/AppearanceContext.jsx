@@ -7,12 +7,12 @@ export function AppearanceProvider({ children }) {
   // Estado inicial recuperado do localStorage ou preset padrão
   const [currentTheme, setCurrentTheme] = useState(() => {
     const saved = localStorage.getItem('zullya_erp_theme');
-    let theme = saved ? JSON.parse(saved) : THEME_PRESETS.acai;
+    let theme = saved ? JSON.parse(saved) : THEME_PRESETS.zullya;
     
     // MIGRATION: Se o tema for o 'acai' mas tiver as cores antigas (azuladas), força o reset para o novo preset
     if (theme.colors?.bg === '#0F172A' || theme.colors?.bg === '#1a1a1a') {
-      console.log('Migrando cores do tema legado para o novo Açaí Premium...');
-      theme = THEME_PRESETS.acai;
+      console.log('Migrando cores do tema legado para o novo Zullya ERP...');
+      theme = THEME_PRESETS.zullya;
     }
     
     return theme;

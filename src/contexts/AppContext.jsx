@@ -34,8 +34,13 @@ function cleanBranding(data) {
     { old: /AçaíTop/g, new: 'Zullya ERP' },
     { old: /AcaìTop/g, new: 'Zullya ERP' },
     { old: /AçaíSystem/g, new: 'Zullya ERP' },
+    { old: /Açaí ERP SaaS/g, new: 'Zullya ERP' },
+    { old: /Açaí ERP/g, new: 'Zullya ERP' },
     { old: /acaibom\.com\.br/g, new: 'zullya.com.br' },
+    { old: /acaierpsaas\.com\.br/g, new: 'zullya.com.br' },
     { old: /@acaibom/g, new: '@zullya_erp' },
+    { old: /@acaierpsaas/g, new: '@zullya_erp' },
+    { old: /"acaiPricePerKg"/g, new: '"productPricePerKg"' },
   ];
   legacyTerms.forEach(t => { str = str.replace(t.old, t.new); });
   return JSON.parse(str);

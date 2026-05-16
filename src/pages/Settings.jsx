@@ -57,7 +57,7 @@ export default function Settings() {
     printerMode: 'browser',
     printerTcpHost: '192.168.1.200',
     printerTcpPort: '9100',
-    acaiPricePerKg: 45.00,
+    productPricePerKg: 45.00,
     // Kitchen printer
     kitchenPrinterEnabled: settings?.kitchenPrinterEnabled ?? false,
     kitchenPrinterMode: settings?.kitchenPrinterMode ?? 'browser',
@@ -133,7 +133,7 @@ export default function Settings() {
     setTimeout(() => {
       const pw = window.open('', '_blank', 'width=600,height=800');
       if (!pw) { toast.error('Pop-up bloqueado! Permita pop-ups para este site.'); return; }
-      const storeName = form.storeName || 'AcaiBom';
+      const storeName = form.storeName || 'Zullya';
       const now = new Date().toLocaleString('pt-BR');
       const font = form.kitchenFont || 'monospace';
       const fsNum = parseInt(form.kitchenFontSize || '13', 10);
@@ -373,7 +373,7 @@ export default function Settings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="form-group md:col-span-2">
                         <label className="form-label text-white">Nome da Unidade</label>
-                        <input className="input-field" value={companyForm.name} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} placeholder="Ex: Açaí ERP SaaS - Shopping Sul" />
+                        <input className="input-field" value={companyForm.name} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} placeholder="Ex: Minha Empresa - Shopping Sul" />
                       </div>
                       <div className="form-group">
                         <label className="form-label text-white">CNPJ / Documento</label>
@@ -455,11 +455,11 @@ export default function Settings() {
                         </div>
                         <div className="form-group">
                           <label className="form-label flex items-center gap-2"><span style={{fontSize:13}}>🎵</span> TikTok</label>
-                          <input className="input-field" value={companyForm.tiktok} onChange={e => setCompanyForm({...companyForm, tiktok: e.target.value})} placeholder="@acaibom" />
+                          <input className="input-field" value={companyForm.tiktok} onChange={e => setCompanyForm({...companyForm, tiktok: e.target.value})} placeholder="@zullya_erp" />
                         </div>
                         <div className="form-group">
                           <label className="form-label flex items-center gap-2"><Video size={13} /> YouTube</label>
-                          <input className="input-field" value={companyForm.youtube} onChange={e => setCompanyForm({...companyForm, youtube: e.target.value})} placeholder="youtube.com/@acaibom" />
+                          <input className="input-field" value={companyForm.youtube} onChange={e => setCompanyForm({...companyForm, youtube: e.target.value})} placeholder="youtube.com/@zullya_erp" />
                         </div>
                       </div>
                     </div>
@@ -646,8 +646,8 @@ export default function Settings() {
                       className="input-field"
                       type="number"
                       step="0.01"
-                      value={hwConfig.acaiPricePerKg}
-                      onChange={e => setHwConfig(p => ({ ...p, acaiPricePerKg: parseFloat(e.target.value) }))}
+                      value={hwConfig.productPricePerKg}
+                      onChange={e => setHwConfig(p => ({ ...p, productPricePerKg: parseFloat(e.target.value) }))}
                     />
                   </div>
 
@@ -849,7 +849,7 @@ export default function Settings() {
                   <div className="space-y-3">
                     <div className="form-group">
                       <label className="form-label">Cabeçalho (linha de boas-vindas)</label>
-                      <input className="input-field" placeholder="Ex: Bem-vindo ao Açaí ERP SaaS!" value={form.printHeader || ''} onChange={e => setForm(p => ({ ...p, printHeader: e.target.value }))} />
+                      <input className="input-field" placeholder="Ex: Bem-vindo ao Zullya ERP!" value={form.printHeader || ''} onChange={e => setForm(p => ({ ...p, printHeader: e.target.value }))} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Mensagem de Rodapé</label>

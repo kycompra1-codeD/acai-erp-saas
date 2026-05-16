@@ -49,7 +49,7 @@ export default function Loyalty() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Fidelidade & Cashback</h1>
-          <p className="page-subtitle">Transforme clientes casuais em fãs apaixonados pelo seu açaí</p>
+          <p className="page-subtitle">Transforme clientes casuais em fãs apaixonados pelo seu negócio</p>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-primary">
