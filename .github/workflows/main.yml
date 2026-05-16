@@ -19,18 +19,29 @@ jobs:
         node-version: '20'
         cache: 'npm'
 
-    - name: Install dependencies
+    - name: Instalar dependências (ERP)
       run: npm install --legacy-peer-deps
 
-    - name: Lint
+    - name: Lint (ERP)
       run: npm run lint
       continue-on-error: true
 
-    - name: Run Build
+    - name: Build (ERP)
       run: npm run build
 
-    - name: Build Docker image (verificação)
+    - name: Instalar dependências (Site)
+      working-directory: ./site
+      run: npm install --legacy-peer-deps
+
+    - name: Build (Site)
+      working-directory: ./site
+      run: npm run build
+
+    - name: Verificar Docker build (ERP frontend)
       run: docker build -t zullya-erp-frontend:test .
+
+    - name: Verificar Docker build (Site)
+      run: docker build -t zullya-site:test ./site
 
   deploy:
     needs: build-and-test
@@ -54,7 +65,7 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          echo "🐳 Subindo containers..."
+          echo "🐳 Subindo containers (ERP + Site)..."
           docker compose --profile production up -d --build --remove-orphans
 
           echo "🧹 Limpando imagens antigas..."

@@ -1,7 +1,9 @@
 # ============================================================
 # Zullya ERP - Docker Compose (Produção / VPS Hostinger)
-# Domínio: zullya.com.br | API: api.zullya.com.br
-# SSL automático via Traefik + Let's Encrypt (já configurado)
+# zullya.com.br     → site institucional (Next.js)
+# app.zullya.com.br → ERP (React)
+# api.zullya.com.br → API (Node.js)
+# SSL automático via Traefik + Let's Encrypt
 # ============================================================
 
 networks:
@@ -79,7 +81,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_minimo_32_caracteres}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
-      FRONTEND_URL: ${FRONTEND_URL:-https://zullya.com.br}
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.zullya.com.br}
       RRPAY_WEBHOOK_SECRET: ${RRPAY_WEBHOOK_SECRET:-}
       RRPAY_API_KEY: ${RRPAY_API_KEY:-}
       RRPAY_BASE_URL: ${RRPAY_BASE_URL:-}
@@ -108,7 +110,38 @@ services:
         max-file: "3"
 
   # ============================================================
-  # FRONTEND - React + Nginx  →  zullya.com.br
+  # SITE INSTITUCIONAL - Next.js  →  zullya.com.br
+  # ============================================================
+  site:
+    build:
+      context: ./site
+      dockerfile: Dockerfile
+    container_name: zullya-site
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - zullya-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=zullya-erp_zullya-net"
+      - "traefik.http.routers.zullya-site.rule=Host(`zullya.com.br`) || Host(`www.zullya.com.br`)"
+      - "traefik.http.routers.zullya-site.entrypoints=websecure"
+      - "traefik.http.routers.zullya-site.tls.certresolver=letsencrypt"
+      - "traefik.http.services.zullya-site.loadbalancer.server.port=3000"
+      # www → sem www
+      - "traefik.http.middlewares.www-to-root.redirectregex.regex=^https://www\\.zullya\\.com\\.br/(.*)"
+      - "traefik.http.middlewares.www-to-root.redirectregex.replacement=https://zullya.com.br/$${1}"
+      - "traefik.http.middlewares.www-to-root.redirectregex.permanent=true"
+      - "traefik.http.routers.zullya-site.middlewares=www-to-root"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================
+  # FRONTEND ERP - React + Nginx  →  app.zullya.com.br
   # ============================================================
   frontend:
     build:
@@ -127,16 +160,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=zullya-erp_zullya-net"
-      # Rota principal: zullya.com.br e www.zullya.com.br
-      - "traefik.http.routers.zullya-frontend.rule=Host(`zullya.com.br`) || Host(`www.zullya.com.br`)"
+      - "traefik.http.routers.zullya-frontend.rule=Host(`app.zullya.com.br`)"
       - "traefik.http.routers.zullya-frontend.entrypoints=websecure"
       - "traefik.http.routers.zullya-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.zullya-frontend.loadbalancer.server.port=80"
-      # Redirecionar www → sem www
-      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.zullya\\.com\\.br/(.*)"
-      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://zullya.com.br/$${1}"
-      - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
-      - "traefik.http.routers.zullya-frontend.middlewares=www-redirect"
     logging:
       driver: "json-file"
       options:
