@@ -51,7 +51,8 @@ jobs:
           cd /opt/zullya-erp
 
           echo "📥 Atualizando código..."
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
 
           echo "🐳 Subindo containers..."
           docker compose --profile production up -d --build --remove-orphans
