@@ -39,7 +39,14 @@ CREATE TABLE IF NOT EXISTS tenants (
         CHECK (status IN ('trial', 'ativo', 'suspenso', 'cancelado', 'inadimplente')),
     trial_expira_em TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '14 days'),
     logo_url TEXT,
-    configuracoes JSONB NOT NULL DEFAULT '{}', -- Configurações personalizadas por empresa
+    configuracoes JSONB NOT NULL DEFAULT '{}',
+    -- Campos de gestão admin (controle pelo dono da plataforma)
+    desconto_percentual NUMERIC(5,2) NOT NULL DEFAULT 0
+        CHECK (desconto_percentual >= 0 AND desconto_percentual <= 100),
+    acesso_gratuito BOOLEAN NOT NULL DEFAULT false,
+    notas_internas TEXT,
+    bloqueado_em TIMESTAMPTZ,
+    motivo_bloqueio TEXT,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -72,17 +79,40 @@ CREATE TABLE IF NOT EXISTS usuarios (
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
-    senha_hash VARCHAR(255) NOT NULL,
+    senha_hash VARCHAR(255),                    -- NULL para usuários que entram só pelo Google
+    google_id VARCHAR(255) UNIQUE,              -- Google OAuth
     nivel_permissao VARCHAR(30) NOT NULL DEFAULT 'operador'
         CHECK (nivel_permissao IN ('master', 'admin', 'gerente', 'vendedor', 'caixa', 'estoque', 'financeiro', 'operador')),
     ativo BOOLEAN NOT NULL DEFAULT true,
     avatar_url TEXT,
     ultimo_acesso TIMESTAMPTZ,
-    refresh_token_hash VARCHAR(255),           -- Para invalidar sessões
+    refresh_token_hash VARCHAR(255),
+    reset_senha_token_hash VARCHAR(255),
+    reset_senha_expiry TIMESTAMPTZ,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(tenant_id, email)                   -- Email único POR empresa (não globalmente)
+    UNIQUE(tenant_id, email)
 );
+
+-- ============================================================
+-- ADMINISTRADORES DA PLATAFORMA (dono / equipe Zullya)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS admins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    senha_hash VARCHAR(255) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    ultimo_acesso TIMESTAMPTZ,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Admin padrão (senha: ZullyaAdmin@2026 — troque no primeiro login)
+INSERT INTO admins (nome, email, senha_hash) VALUES (
+    'Admin Zullya',
+    'admin@zullya.com.br',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewWBNNpUbY4Jk8Oy'
+) ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================
 -- FILIAIS (Opcional - empresas com múltiplas unidades)
@@ -137,6 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_assinaturas_status ON assinaturas(status);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_criado ON audit_logs(criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_filiais_tenant ON filiais(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_usuarios_google_id ON usuarios(google_id);
 
 -- ============================================================
 -- FUNÇÃO: Atualizar atualizado_em automaticamente

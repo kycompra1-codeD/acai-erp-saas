@@ -14,9 +14,11 @@ RUN npm install --legacy-peer-deps
 # Copiar o restante do código-fonte
 COPY . .
 
-# URL da API — deve ser passada em produção via build arg
+# Variáveis de build
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Gerar o build de produção
 RUN npm run build

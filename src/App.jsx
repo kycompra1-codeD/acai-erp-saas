@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { AppearanceProvider } from './contexts/AppearanceContext';
@@ -29,15 +30,20 @@ import Subscription from './pages/Subscription';
 import Sales from './pages/Sales';
 import Login from './pages/Login';
 import ResetSenha from './pages/ResetSenha';
+import AdminLogin from './pages/AdminLogin';
+import AdminPanel from './pages/AdminPanel';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
     <AuthProvider>
       <AppearanceProvider>
         <AppProvider>
           <BrowserRouter>
             <Routes>
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminPanel />} />
               <Route path="/login" element={<Login />} />
               <Route path="/redefinir-senha" element={<ResetSenha />} />
               <Route
@@ -155,6 +161,7 @@ function App() {
         </AppProvider>
       </AppearanceProvider>
     </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
 

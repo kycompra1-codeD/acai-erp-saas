@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Grape, Eye, EyeOff, Loader2, Shield, Wifi, WifiOff, X } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/api';
 import toast from 'react-hot-toast';
@@ -13,7 +14,11 @@ export default function Login() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const { login, backendOnline } = useAuth();
+  // Modal de completar cadastro via Google
+  const [googleCadastro, setGoogleCadastro] = useState(null); // { google_id, email, nome, avatar_url }
+  const [nomeEmpresa, setNomeEmpresa] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginGoogle, registroGoogle, backendOnline } = useAuth();
   const navigate = useNavigate();
 
   const handleForgot = async (e) => {
@@ -56,6 +61,41 @@ export default function Login() {
       toast.error(err.message || 'Erro ao fazer login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!backendOnline) { toast.error('API offline. Use email e senha.'); return; }
+    setLoading(true);
+    try {
+      const result = await loginGoogle(credentialResponse.credential);
+      if (result?.precisa_completar_cadastro) {
+        setGoogleCadastro(result.google_dados);
+      } else if (result?.sucesso) {
+        toast.success('Bem-vindo ao Zullya ERP!');
+        navigate('/');
+      } else {
+        toast.error(result?.mensagem || 'Erro ao entrar com Google');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCadastro = async (e) => {
+    e.preventDefault();
+    if (!nomeEmpresa.trim()) { toast.error('Informe o nome da sua empresa'); return; }
+    setGoogleLoading(true);
+    try {
+      const result = await registroGoogle({ ...googleCadastro, nome_empresa: nomeEmpresa });
+      if (result?.sucesso) {
+        toast.success('Conta criada! Seu trial de 14 dias começou.');
+        navigate('/');
+      } else {
+        toast.error(result?.mensagem || 'Erro ao criar conta');
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -211,6 +251,19 @@ export default function Login() {
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         </div>
 
+        {/* Botão Google */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => toast.error('Erro ao entrar com Google')}
+            text="signin_with"
+            shape="rectangular"
+            theme="outline"
+            locale="pt-BR"
+            width="320"
+          />
+        </div>
+
         {/* Botão demo */}
         <button
           type="button"
@@ -237,12 +290,61 @@ export default function Login() {
           Não tem conta?{' '}
           <span
             style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
-            onClick={() => toast('Cadastro em breve! Por enquanto use o modo Demo.', { icon: '🚀' })}
+            onClick={() => toast('Use "Entrar com Google" para criar sua conta grátis!', { icon: '🚀' })}
           >
             Criar conta grátis
           </span>
         </p>
       </div>
+
+      {/* Modal: Completar cadastro Google */}
+      {googleCadastro && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 16,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)', padding: 32, width: '100%', maxWidth: 400,
+            position: 'relative',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              {googleCadastro.avatar_url && (
+                <img src={googleCadastro.avatar_url} alt="" style={{ width: 48, height: 48, borderRadius: '50%' }} />
+              )}
+              <div>
+                <p style={{ fontWeight: 700, fontSize: 16 }}>Olá, {googleCadastro.nome}!</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{googleCadastro.email}</p>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+              Só falta uma coisa: qual é o nome da sua empresa?
+            </p>
+            <form onSubmit={handleGoogleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input
+                className="input-field"
+                type="text"
+                value={nomeEmpresa}
+                onChange={e => setNomeEmpresa(e.target.value)}
+                placeholder="Ex: Minha Empresa Ltda"
+                autoFocus
+              />
+              <button type="submit" className="btn btn-primary" disabled={googleLoading || !nomeEmpresa.trim()}>
+                {googleLoading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                {googleLoading ? 'Criando conta...' : 'Criar conta grátis — 14 dias de trial'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGoogleCadastro(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Esqueci minha senha */}
       {forgotOpen && (

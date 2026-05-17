@@ -118,6 +118,50 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Login Google ───────────────────────────────────────────
+  const loginGoogle = async (credential) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await res.json();
+
+      if (!data.sucesso) throw new Error(data.mensagem || 'Erro ao entrar com Google');
+
+      if (data.precisa_completar_cadastro) {
+        return { sucesso: true, precisa_completar_cadastro: true, google_dados: data.google_dados };
+      }
+
+      localStorage.setItem('zullya_access_token', data.dados.access_token);
+      localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
+      _setSession(data.dados, false);
+      return { sucesso: true };
+    } catch (err) {
+      return { sucesso: false, mensagem: err.message };
+    }
+  };
+
+  // ── Registro via Google (após preencher nome da empresa) ───
+  const registroGoogle = async ({ google_id, email, nome, nome_empresa, avatar_url }) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/registro-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ google_id, email, nome, nome_empresa, avatar_url }),
+      });
+      const data = await res.json();
+      if (!data.sucesso) throw new Error(data.mensagem || 'Erro ao criar conta');
+      localStorage.setItem('zullya_access_token', data.dados.access_token);
+      localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
+      _setSession(data.dados, false);
+      return { sucesso: true };
+    } catch (err) {
+      return { sucesso: false, mensagem: err.message };
+    }
+  };
+
   // ── Login ──────────────────────────────────────────────────
   const login = async (email, password) => {
     // Modo DEMO (backend offline ou credenciais demo)
@@ -160,6 +204,8 @@ export function AuthProvider({ children }) {
       user,
       empresa,
       login,
+      loginGoogle,
+      registroGoogle,
       logout,
       loading,
       isAuthenticated: !!user,
@@ -167,7 +213,6 @@ export function AuthProvider({ children }) {
       role: user?.nivel_permissao || user?.role || null,
       modoDemo,
       backendOnline,
-      // Compatibilidade com código legado
       name: user?.nome || user?.name,
     }}>
       {children}

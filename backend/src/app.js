@@ -28,6 +28,7 @@ app.use(cors({
     'https://www.zullya.com.br',
     'http://localhost:9999',
     'http://localhost:8080',
+    'http://localhost:5173',
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -82,6 +83,7 @@ const comprasRoutes = require('./routes/compras');
 const financeiroRoutes = require('./routes/financeiro');
 const dashboardRoutes = require('./routes/dashboard');
 const relatoriosRoutes = require('./routes/relatorios');
+const adminRoutes = require('./routes/admin');
 
 // Health check
 app.get('/health', (req, res) => {
@@ -107,6 +109,7 @@ app.use('/api/compras', comprasRoutes);
 app.use('/api/financeiro', financeiroRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ============================================================
 // Rota 404

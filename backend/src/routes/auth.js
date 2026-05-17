@@ -8,6 +8,9 @@ const { query, withTransaction } = require('../db/connection');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const { enviarBoasVindas, enviarRedefinicaoSenha } = require('../services/emailService');
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const router = express.Router();
 
 // ============================================================
@@ -378,6 +381,170 @@ router.post('/redefinir-senha', [
     return res.json({ sucesso: true, mensagem: 'Senha redefinida com sucesso. Faça login com sua nova senha.' });
   } catch (err) {
     console.error('❌ Erro em redefinir-senha:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno no servidor.' });
+  }
+});
+
+// ============================================================
+// POST /api/auth/google - Login / registro via Google OAuth
+// ============================================================
+router.post('/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ sucesso: false, mensagem: 'Credential Google não informado.' });
+  }
+
+  try {
+    // Verificar token com Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { sub: googleId, email, name, picture } = ticket.getPayload();
+
+    // Buscar usuário por google_id
+    let { rows } = await query(
+      `SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
+              u.tenant_id, t.nome_empresa, t.status as tenant_status
+       FROM usuarios u
+       JOIN tenants t ON t.id = u.tenant_id
+       WHERE u.google_id = $1 AND u.ativo = true LIMIT 1`,
+      [googleId]
+    );
+
+    // Não encontrou pelo google_id → tentar vincular pelo email
+    if (rows.length === 0) {
+      const byEmail = await query(
+        `SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
+                u.tenant_id, t.nome_empresa, t.status as tenant_status
+         FROM usuarios u
+         JOIN tenants t ON t.id = u.tenant_id
+         WHERE u.email = $1 AND u.ativo = true LIMIT 1`,
+        [email]
+      );
+
+      if (byEmail.rows.length > 0) {
+        // Vincular google_id à conta existente
+        await query(
+          'UPDATE usuarios SET google_id = $1, avatar_url = COALESCE(avatar_url, $2) WHERE id = $3',
+          [googleId, picture, byEmail.rows[0].id]
+        );
+        rows = byEmail.rows;
+      } else {
+        // Conta não existe → retornar dados para o frontend completar o cadastro
+        return res.status(200).json({
+          sucesso: true,
+          precisa_completar_cadastro: true,
+          google_dados: { google_id: googleId, email, nome: name, avatar_url: picture },
+        });
+      }
+    }
+
+    const usuario = rows[0];
+
+    // Verificar status do tenant
+    const statusPermitidos = ['ativo', 'trial'];
+    if (!statusPermitidos.includes(usuario.tenant_status)) {
+      return res.status(403).json({
+        sucesso: false,
+        mensagem: 'Acesso suspenso. Renove sua assinatura para continuar.',
+        codigo: 'TENANT_SUSPENSO',
+      });
+    }
+
+    // Gerar tokens
+    const { accessToken, refreshToken } = gerarTokens(
+      usuario.id, usuario.tenant_id, usuario.nivel_permissao
+    );
+    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    await query(
+      'UPDATE usuarios SET refresh_token_hash = $1, ultimo_acesso = NOW() WHERE id = $2',
+      [refreshHash, usuario.id]
+    );
+
+    return res.json({
+      sucesso: true,
+      dados: {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, nivel_permissao: usuario.nivel_permissao },
+        empresa: { id: usuario.tenant_id, nome_empresa: usuario.nome_empresa, status: usuario.tenant_status },
+      },
+    });
+  } catch (err) {
+    console.error('❌ Erro no login Google:', err);
+    return res.status(401).json({ sucesso: false, mensagem: 'Token Google inválido.' });
+  }
+});
+
+// ============================================================
+// POST /api/auth/registro-google - Finalizar cadastro via Google
+// ============================================================
+router.post('/registro-google', [
+  body('google_id').notEmpty(),
+  body('email').isEmail(),
+  body('nome').notEmpty(),
+  body('nome_empresa').notEmpty().withMessage('Nome da empresa é obrigatório'),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) {
+    return res.status(400).json({ sucesso: false, erros: erros.array() });
+  }
+
+  const { google_id, email, nome, nome_empresa, avatar_url, telefone, cnpj } = req.body;
+
+  try {
+    await withTransaction(async (client) => {
+      const { rows: emailCheck } = await client.query(
+        'SELECT id FROM usuarios WHERE email = $1 LIMIT 1', [email]
+      );
+      if (emailCheck.length > 0) {
+        throw { status: 409, mensagem: 'Este e-mail já está cadastrado. Faça login normalmente.' };
+      }
+
+      const { rows: planos } = await client.query("SELECT id FROM planos WHERE nome = 'Starter' LIMIT 1");
+      const plano_id = planos[0]?.id || null;
+
+      const { rows: tenantRows } = await client.query(
+        `INSERT INTO tenants (nome_empresa, cnpj, email_contato, telefone, plano_id, status)
+         VALUES ($1, $2, $3, $4, $5, 'trial') RETURNING id`,
+        [nome_empresa, cnpj || null, email, telefone || null, plano_id]
+      );
+      const tenant_id = tenantRows[0].id;
+
+      const { rows: userRows } = await client.query(
+        `INSERT INTO usuarios (tenant_id, nome, email, google_id, avatar_url, nivel_permissao)
+         VALUES ($1, $2, $3, $4, $5, 'master') RETURNING id`,
+        [tenant_id, nome, email, google_id, avatar_url || null]
+      );
+      const usuario_id = userRows[0].id;
+
+      await client.query(
+        `INSERT INTO assinaturas (tenant_id, plano_id, status, periodo, valor, proximo_vencimento)
+         VALUES ($1, $2, 'trial', 'mensal', 0, NOW() + INTERVAL '14 days')`,
+        [tenant_id, plano_id]
+      );
+
+      const { accessToken, refreshToken } = gerarTokens(usuario_id, tenant_id, 'master');
+      const refreshHash = await bcrypt.hash(refreshToken, 10);
+      await client.query('UPDATE usuarios SET refresh_token_hash = $1 WHERE id = $2', [refreshHash, usuario_id]);
+
+      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => {});
+
+      return res.status(201).json({
+        sucesso: true,
+        mensagem: 'Conta criada! Seu trial de 14 dias começou.',
+        dados: {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          usuario: { id: usuario_id, nome, email, nivel_permissao: 'master' },
+          empresa: { id: tenant_id, nome_empresa, status: 'trial' },
+        },
+      });
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ sucesso: false, mensagem: err.mensagem });
+    console.error('❌ Erro no registro Google:', err);
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno no servidor.' });
   }
 });

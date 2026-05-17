@@ -87,6 +87,7 @@ services:
       RRPAY_BASE_URL: ${RRPAY_BASE_URL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-Zullya ERP <noreply@zullya.com.br>}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,6 +150,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://api.zullya.com.br/api}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     container_name: zullya-frontend
     restart: unless-stopped
     ports:
