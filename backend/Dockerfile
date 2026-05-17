@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Instalar dependências primeiro (camada de cache otimizada)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --legacy-peer-deps --omit=dev
 
 # Copiar código fonte
 COPY src/ ./src/
