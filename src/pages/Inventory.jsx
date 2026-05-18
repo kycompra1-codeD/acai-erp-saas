@@ -48,44 +48,37 @@ export default function Inventory() {
     ok: inventory.filter(i => i.quantity > i.minQuantity).length,
   }), [inventory]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name) { toast.error('Nome obrigatório'); return; }
-    if (modal === 'add') {
-      addInventoryItem({ ...form, quantity: parseFloat(form.quantity || 0), minQuantity: parseFloat(form.minQuantity || 0), cost: parseFloat(form.cost || 0), movements: [] });
-      toast.success('Insumo adicionado!');
-    } else {
-      updateInventoryItem(modal.id, { ...form, quantity: parseFloat(form.quantity || 0), minQuantity: parseFloat(form.minQuantity || 0), cost: parseFloat(form.cost || 0) });
-      toast.success('Insumo atualizado!');
-    }
-    setModal(null); setForm(EMPTY_ITEM);
+    try {
+      if (modal === 'add') {
+        await addInventoryItem({ ...form, quantity: parseFloat(form.quantity || 0), minQuantity: parseFloat(form.minQuantity || 0), cost: parseFloat(form.cost || 0) });
+        toast.success('Insumo adicionado!');
+      } else {
+        await updateInventoryItem(modal.id, { ...form, quantity: parseFloat(form.quantity || 0), minQuantity: parseFloat(form.minQuantity || 0), cost: parseFloat(form.cost || 0) });
+        toast.success('Insumo atualizado!');
+      }
+      setModal(null); setForm(EMPTY_ITEM);
+    } catch { toast.error('Erro ao salvar. Tente novamente.'); }
   };
 
-  const handleAdjust = () => {
+  const handleAdjust = async () => {
     const qty = parseFloat(adjQty);
     if (!adjQty || isNaN(qty) || qty <= 0) { toast.error('Informe uma quantidade válida'); return; }
     if (adjMode === 'saida' && qty > adjModal.quantity) { toast.error('Quantidade maior que o saldo atual'); return; }
     if (adjMode === 'acerto' && qty < 0) { toast.error('Valor de acerto inválido'); return; }
 
-    const movement = {
-      id: Date.now(),
-      type: adjMode,
-      qty: adjMode === 'saida' ? -qty : qty,
-      reason: adjMode === 'saida' ? adjReason : adjMode === 'entrada' ? 'Compra/Reposição' : 'Acerto de Inventário',
-      note: adjNote,
-      date: new Date().toISOString(),
-    };
-
     let newQty;
     if (adjMode === 'entrada') newQty = adjModal.quantity + qty;
     else if (adjMode === 'saida') newQty = adjModal.quantity - qty;
-    else newQty = qty; // acerto absoluto
+    else newQty = qty;
 
-    const prevMovements = adjModal.movements || [];
-    updateInventoryItem(adjModal.id, { quantity: newQty, lastUpdate: new Date().toISOString(), movements: [movement, ...prevMovements].slice(0, 50) });
-
-    const modeLabel = { entrada: '✅ Entrada', saida: '📉 Saída/Perda', acerto: '✏️ Acerto' }[adjMode];
-    toast.success(`${modeLabel}: ${adjModal.name} — Novo saldo: ${newQty} ${adjModal.unit}`);
-    setAdjModal(null); setAdjQty(''); setAdjReason(LOSS_REASONS[0]); setAdjNote('');
+    try {
+      await updateInventoryItem(adjModal.id, { quantity: newQty, lastUpdate: new Date().toISOString() });
+      const modeLabel = { entrada: '✅ Entrada', saida: '📉 Saída/Perda', acerto: '✏️ Acerto' }[adjMode];
+      toast.success(`${modeLabel}: ${adjModal.name} — Novo saldo: ${newQty} ${adjModal.unit}`);
+      setAdjModal(null); setAdjQty(''); setAdjReason(LOSS_REASONS[0]); setAdjNote('');
+    } catch { toast.error('Erro ao ajustar estoque. Tente novamente.'); }
   };
 
   const openAdj = (item) => { setAdjModal(item); setAdjMode('entrada'); setAdjQty(''); setAdjReason(LOSS_REASONS[0]); setAdjNote(''); };

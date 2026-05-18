@@ -71,18 +71,19 @@ export default function Finance() {
     setShowModal(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.description?.trim()) { toast.error('Descrição é obrigatória!'); return; }
     if (!form.amount || parseFloat(form.amount) <= 0) { toast.error('Valor inválido!'); return; }
-    addFinanceEntry({ ...form, amount: parseFloat(form.amount) });
-    toast.success(`${form.type === 'receita' ? 'Receita' : 'Despesa'} lançada!`);
-    closeModal();
+    try {
+      await addFinanceEntry({ ...form, amount: parseFloat(form.amount) });
+      toast.success(`${form.type === 'receita' ? 'Receita' : 'Despesa'} lançada!`);
+      closeModal();
+    } catch { toast.error('Erro ao salvar. Tente novamente.'); }
   };
 
-  const handleDelete = () => {
-    deleteFinanceEntry(delId);
-    setDelId(null);
-    toast.success('Lançamento excluído!');
+  const handleDelete = async () => {
+    try { await deleteFinanceEntry(delId); setDelId(null); toast.success('Lançamento excluído!'); }
+    catch { toast.error('Erro ao excluir. Tente novamente.'); }
   };
 
   return (

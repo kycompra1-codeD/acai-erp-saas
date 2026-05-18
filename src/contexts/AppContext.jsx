@@ -71,14 +71,16 @@ export function AppProvider({ children }) {
   const [activeCompanyId, setActiveCompanyId] = useState(() => stored?.activeCompanyId ?? freshData.initialCompanies[0].id);
 
   // --- DATA STATES ---
-  const [allProducts, setAllProducts] = useState(() => stored?.products ?? freshData.initialProducts);
-  const [allCustomers, setAllCustomers] = useState(() => stored?.customers ?? freshData.initialCustomers);
-  const [allInventory, setAllInventory] = useState(() => stored?.inventory ?? freshData.initialInventory);
-  const [allOrders, setAllOrders] = useState(() => stored?.orders ?? freshData.initialOrders);
+  // Quando autenticado, entidades partem vazias e são preenchidas pela API (sem mock/localStorage)
+  const auth = isAuthenticated();
+  const [allProducts, setAllProducts] = useState(() => auth ? [] : (stored?.products ?? freshData.initialProducts));
+  const [allCustomers, setAllCustomers] = useState(() => auth ? [] : (stored?.customers ?? freshData.initialCustomers));
+  const [allInventory, setAllInventory] = useState(() => auth ? [] : (stored?.inventory ?? freshData.initialInventory));
+  const [allOrders, setAllOrders] = useState(() => auth ? [] : (stored?.orders ?? freshData.initialOrders));
   const [allSettings, setAllSettings] = useState(() => ({ ...freshData.initialSettings, ...(stored?.settings ?? {}) }));
-  const [allEmployees, setAllEmployees] = useState(() => Array.isArray(stored?.employees) ? stored.employees : freshData.initialEmployees);
-  const [allSuppliers, setAllSuppliers] = useState(() => Array.isArray(stored?.suppliers) ? stored.suppliers : freshData.initialSuppliers);
-  const [allFinanceEntries, setAllFinanceEntries] = useState(() => Array.isArray(stored?.financeEntries) ? stored.financeEntries : freshData.initialFinanceEntries);
+  const [allEmployees, setAllEmployees] = useState(() => auth ? [] : (Array.isArray(stored?.employees) ? stored.employees : freshData.initialEmployees));
+  const [allSuppliers, setAllSuppliers] = useState(() => auth ? [] : (Array.isArray(stored?.suppliers) ? stored.suppliers : freshData.initialSuppliers));
+  const [allFinanceEntries, setAllFinanceEntries] = useState(() => auth ? [] : (Array.isArray(stored?.financeEntries) ? stored.financeEntries : freshData.initialFinanceEntries));
   const [allConciliations, setAllConciliations] = useState(() => Array.isArray(stored?.conciliations) ? stored.conciliations : []);
   const [allProposals, setAllProposals] = useState(() => Array.isArray(stored?.proposals) ? stored.proposals : freshData.initialProposals);
   const [allAutomationRules, setAllAutomationRules] = useState(() => Array.isArray(stored?.automationRules) ? stored.automationRules : freshData.initialAutomationRules);
@@ -239,14 +241,11 @@ export function AppProvider({ children }) {
   // ── PRODUTOS ──────────────────────────────────────────────
   const addProduct = useCallback(async (product) => {
     if (isAuthenticated()) {
-      try {
-        const res = await produtosApi.criar(mapProdutoToApi({ ...product, categoryId: product.categoryId || null }));
-        if (res?.dados) {
-          const mapped = mapProduto(res.dados, activeCompanyId);
-          setAllProducts(prev => [...prev, mapped]);
-          return mapped;
-        }
-      } catch (err) { console.error('addProduct API:', err.message); }
+      const res = await produtosApi.criar(mapProdutoToApi({ ...product, categoryId: product.categoryId || null }));
+      if (!res?.dados) throw new Error('Falha ao criar produto');
+      const mapped = mapProduto(res.dados, activeCompanyId);
+      setAllProducts(prev => [...prev, mapped]);
+      return mapped;
     }
     const newP = { ...product, id: `p${Date.now()}`, companyId: activeCompanyId };
     setAllProducts(prev => [...prev, newP]);
@@ -255,15 +254,7 @@ export function AppProvider({ children }) {
 
   const updateProduct = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try {
-        const res = await produtosApi.editar(id, mapProdutoToApi(updates));
-        if (res?.dados) {
-          const mapped = mapProduto(res.dados, activeCompanyId);
-          setAllProducts(prev => prev.map(p => p.id === id ? mapped : p));
-          if (mapped.mappings) marketplaceService.syncInventory(mapped);
-          return;
-        }
-      } catch (err) { console.error('updateProduct API:', err.message); }
+      await produtosApi.editar(id, mapProdutoToApi(updates));
     }
     setAllProducts(prev => {
       const updated = prev.map(p => p.id === id ? { ...p, ...updates } : p);
@@ -275,7 +266,7 @@ export function AppProvider({ children }) {
 
   const deleteProduct = useCallback(async (id) => {
     if (isAuthenticated()) {
-      try { await produtosApi.desativar(id); } catch (err) { console.error('deleteProduct API:', err.message); }
+      await produtosApi.desativar(id);
     }
     setAllProducts(prev => prev.filter(p => p.id !== id));
   }, []);
@@ -287,32 +278,26 @@ export function AppProvider({ children }) {
     let newOrder;
 
     if (isAuthenticated()) {
-      try {
-        const res = await pedidosApi.criar(mapPedidoToApi(orderData));
-        if (res?.dados) {
-          newOrder = mapPedido(res.dados, activeCompanyId);
-          setAllOrders(prev => [newOrder, ...prev]);
-          setOrderCounter(prev => prev + 1);
-
-          // Atualizar caixa local
-          setAllCashiers(prev => {
-            const current = prev[activeCompanyId] || freshData.initialCashier;
-            if (!current.isOpen) return prev;
-            return {
-              ...prev,
-              [activeCompanyId]: {
-                ...current,
-                salesCount: current.salesCount + 1,
-                currentBalance: orderData.payment === 'dinheiro' ? current.currentBalance + orderData.total : current.currentBalance,
-              },
-            };
-          });
-
-          eventBus.emit(EVENTS.SALE_CREATED, { order: newOrder });
-          eventBus.emit(EVENTS.KITCHEN_REFRESH, { orderId: newOrder.id });
-          return newOrder;
-        }
-      } catch (err) { console.error('addOrder API:', err.message); }
+      const res = await pedidosApi.criar(mapPedidoToApi(orderData));
+      if (!res?.dados) throw new Error('Falha ao criar pedido');
+      newOrder = mapPedido(res.dados, activeCompanyId);
+      setAllOrders(prev => [newOrder, ...prev]);
+      setOrderCounter(prev => prev + 1);
+      setAllCashiers(prev => {
+        const current = prev[activeCompanyId] || freshData.initialCashier;
+        if (!current.isOpen) return prev;
+        return {
+          ...prev,
+          [activeCompanyId]: {
+            ...current,
+            salesCount: current.salesCount + 1,
+            currentBalance: orderData.payment === 'dinheiro' ? current.currentBalance + orderData.total : current.currentBalance,
+          },
+        };
+      });
+      eventBus.emit(EVENTS.SALE_CREATED, { order: newOrder });
+      eventBus.emit(EVENTS.KITCHEN_REFRESH, { orderId: newOrder.id });
+      return newOrder;
     }
 
     // Fallback local
@@ -391,7 +376,7 @@ export function AppProvider({ children }) {
 
   const updateOrderStatus = useCallback(async (id, status) => {
     if (isAuthenticated()) {
-      try { await pedidosApi.atualizarStatus(id, toPtStatus(status)); } catch (err) { console.error('updateOrderStatus API:', err.message); }
+      await pedidosApi.atualizarStatus(id, toPtStatus(status));
     }
     const now = new Date().toISOString();
     const tsMap = { preparing: 'preparingAt', ready: 'readyAt', delivered: 'deliveredAt', cancelled: 'cancelledAt' };
@@ -408,14 +393,11 @@ export function AppProvider({ children }) {
   // ── CLIENTES ──────────────────────────────────────────────
   const addCustomer = useCallback(async (customer) => {
     if (isAuthenticated()) {
-      try {
-        const res = await clientesApi.criar(mapClienteToApi(customer));
-        if (res?.dados) {
-          const mapped = mapCliente(res.dados, activeCompanyId);
-          setAllCustomers(prev => [...prev, mapped]);
-          return mapped;
-        }
-      } catch (err) { console.error('addCustomer API:', err.message); }
+      const res = await clientesApi.criar(mapClienteToApi(customer));
+      if (!res?.dados) throw new Error('Falha ao criar cliente');
+      const mapped = mapCliente(res.dados, activeCompanyId);
+      setAllCustomers(prev => [...prev, mapped]);
+      return mapped;
     }
     const newC = { ...customer, id: `c${Date.now()}`, companyId: activeCompanyId, points: 0, totalSpent: 0, ordersCount: 0, createdAt: new Date().toISOString() };
     setAllCustomers(prev => [...prev, newC]);
@@ -424,14 +406,14 @@ export function AppProvider({ children }) {
 
   const updateCustomer = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try { await clientesApi.editar(id, mapClienteToApi(updates)); } catch (err) { console.error('updateCustomer API:', err.message); }
+      await clientesApi.editar(id, mapClienteToApi(updates));
     }
     setAllCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   }, []);
 
   const deleteCustomer = useCallback(async (id) => {
     if (isAuthenticated()) {
-      try { await clientesApi.desativar(id); } catch (err) { console.error('deleteCustomer API:', err.message); }
+      await clientesApi.desativar(id);
     }
     setAllCustomers(prev => prev.filter(c => c.id !== id));
   }, []);
@@ -439,21 +421,18 @@ export function AppProvider({ children }) {
   // ── ESTOQUE ───────────────────────────────────────────────
   const updateInventoryItem = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try { await estoqueApi.editar(id, mapInsumoToApi(updates)); } catch (err) { console.error('updateInventory API:', err.message); }
+      await estoqueApi.editar(id, mapInsumoToApi(updates));
     }
     setAllInventory(prev => prev.map(i => i.id === id ? { ...i, ...updates, lastUpdate: new Date().toISOString() } : i));
   }, []);
 
   const addInventoryItem = useCallback(async (item) => {
     if (isAuthenticated()) {
-      try {
-        const res = await estoqueApi.criar(mapInsumoToApi(item));
-        if (res?.dados) {
-          const mapped = mapInsumo(res.dados, activeCompanyId);
-          setAllInventory(prev => [...prev, mapped]);
-          return mapped;
-        }
-      } catch (err) { console.error('addInventory API:', err.message); }
+      const res = await estoqueApi.criar(mapInsumoToApi(item));
+      if (!res?.dados) throw new Error('Falha ao criar insumo');
+      const mapped = mapInsumo(res.dados, activeCompanyId);
+      setAllInventory(prev => [...prev, mapped]);
+      return mapped;
     }
     const newI = { ...item, id: `i${Date.now()}`, companyId: activeCompanyId, lastUpdate: new Date().toISOString() };
     setAllInventory(prev => [...prev, newI]);
@@ -462,9 +441,7 @@ export function AppProvider({ children }) {
 
   const addInventoryStock = useCallback(async (id, qty, motivo = 'Ajuste manual') => {
     if (isAuthenticated()) {
-      try {
-        await estoqueApi.registrarMovimentacao(id, { tipo: 'entrada', quantidade: qty, motivo });
-      } catch (err) { console.error('addInventoryStock API:', err.message); }
+      await estoqueApi.registrarMovimentacao(id, { tipo: 'entrada', quantidade: qty, motivo });
     }
     setAllInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: i.quantity + qty, lastUpdate: new Date().toISOString() } : i));
   }, []);
@@ -477,14 +454,11 @@ export function AppProvider({ children }) {
   // ── FUNCIONÁRIOS ──────────────────────────────────────────
   const addEmployee = useCallback(async (emp) => {
     if (isAuthenticated()) {
-      try {
-        const res = await funcionariosApi.criar(mapFuncionarioToApi(emp));
-        if (res?.dados) {
-          const mapped = mapFuncionario(res.dados, activeCompanyId);
-          setAllEmployees(prev => [...prev, mapped]);
-          return mapped;
-        }
-      } catch (err) { console.error('addEmployee API:', err.message); }
+      const res = await funcionariosApi.criar(mapFuncionarioToApi(emp));
+      if (!res?.dados) throw new Error('Falha ao cadastrar funcionário');
+      const mapped = mapFuncionario(res.dados, activeCompanyId);
+      setAllEmployees(prev => [...prev, mapped]);
+      return mapped;
     }
     const newE = { ...emp, id: `e${Date.now()}`, companyId: activeCompanyId, hiredAt: emp.hiredAt || new Date().toISOString() };
     setAllEmployees(prev => [...prev, newE]);
@@ -493,14 +467,14 @@ export function AppProvider({ children }) {
 
   const updateEmployee = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try { await funcionariosApi.editar(id, mapFuncionarioToApi(updates)); } catch (err) { console.error('updateEmployee API:', err.message); }
+      await funcionariosApi.editar(id, mapFuncionarioToApi(updates));
     }
     setAllEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, []);
 
   const deleteEmployee = useCallback(async (id) => {
     if (isAuthenticated()) {
-      try { await funcionariosApi.desativar(id); } catch (err) { console.error('deleteEmployee API:', err.message); }
+      await funcionariosApi.desativar(id);
     }
     setAllEmployees(prev => prev.filter(e => e.id !== id));
   }, []);
@@ -508,14 +482,11 @@ export function AppProvider({ children }) {
   // ── FORNECEDORES ──────────────────────────────────────────
   const addSupplier = useCallback(async (sup) => {
     if (isAuthenticated()) {
-      try {
-        const res = await fornecedoresApi.criar(mapFornecedorToApi(sup));
-        if (res?.dados) {
-          const mapped = mapFornecedor(res.dados, activeCompanyId);
-          setAllSuppliers(prev => [...prev, mapped]);
-          return mapped;
-        }
-      } catch (err) { console.error('addSupplier API:', err.message); }
+      const res = await fornecedoresApi.criar(mapFornecedorToApi(sup));
+      if (!res?.dados) throw new Error('Falha ao cadastrar fornecedor');
+      const mapped = mapFornecedor(res.dados, activeCompanyId);
+      setAllSuppliers(prev => [...prev, mapped]);
+      return mapped;
     }
     const newS = { ...sup, id: `s${Date.now()}`, companyId: activeCompanyId, lastOrder: null };
     setAllSuppliers(prev => [...prev, newS]);
@@ -524,14 +495,14 @@ export function AppProvider({ children }) {
 
   const updateSupplier = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try { await fornecedoresApi.editar(id, mapFornecedorToApi(updates)); } catch (err) { console.error('updateSupplier API:', err.message); }
+      await fornecedoresApi.editar(id, mapFornecedorToApi(updates));
     }
     setAllSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   }, []);
 
   const deleteSupplier = useCallback(async (id) => {
     if (isAuthenticated()) {
-      try { await fornecedoresApi.desativar(id); } catch (err) { console.error('deleteSupplier API:', err.message); }
+      await fornecedoresApi.desativar(id);
     }
     setAllSuppliers(prev => prev.filter(s => s.id !== id));
   }, []);
@@ -539,14 +510,11 @@ export function AppProvider({ children }) {
   // ── FINANCEIRO ────────────────────────────────────────────
   const addFinanceEntry = useCallback(async (entry) => {
     if (isAuthenticated() && !entry.pedidoId) {
-      try {
-        const res = await financeiroApi.criar(mapLancamentoToApi(entry));
-        if (res?.dados) {
-          const mapped = mapLancamento(res.dados, activeCompanyId);
-          setAllFinanceEntries(prev => [mapped, ...prev]);
-          return mapped;
-        }
-      } catch (err) { console.error('addFinanceEntry API:', err.message); }
+      const res = await financeiroApi.criar(mapLancamentoToApi(entry));
+      if (!res?.dados) throw new Error('Falha ao criar lançamento');
+      const mapped = mapLancamento(res.dados, activeCompanyId);
+      setAllFinanceEntries(prev => [mapped, ...prev]);
+      return mapped;
     }
     const newF = { ...entry, id: `f${Date.now()}`, companyId: activeCompanyId, date: entry.date || new Date().toISOString() };
     setAllFinanceEntries(prev => [newF, ...prev]);
@@ -555,14 +523,14 @@ export function AppProvider({ children }) {
 
   const updateFinanceEntry = useCallback(async (id, updates) => {
     if (isAuthenticated()) {
-      try { await financeiroApi.editar(id, mapLancamentoToApi(updates)); } catch (err) { console.error('updateFinance API:', err.message); }
+      await financeiroApi.editar(id, mapLancamentoToApi(updates));
     }
     setAllFinanceEntries(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
   }, []);
 
   const deleteFinanceEntry = useCallback(async (id) => {
     if (isAuthenticated()) {
-      try { await financeiroApi.excluir(id); } catch (err) { console.error('deleteFinance API:', err.message); }
+      await financeiroApi.excluir(id);
     }
     setAllFinanceEntries(prev => prev.filter(f => f.id !== id));
   }, []);

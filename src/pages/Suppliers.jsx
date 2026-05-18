@@ -52,21 +52,18 @@ export default function Suppliers() {
     };
   }, [suppliers]);
 
-  const handleSave = (formData) => {
-    if (editingSupplier) {
-      updateSupplier(editingSupplier.id, formData);
-      toast.success('Fornecedor atualizado!');
-    } else {
-      addSupplier({
-        ...formData,
-        id: Date.now().toString(),
-        companyId,
-        createdAt: new Date().toISOString()
-      });
-      toast.success('Fornecedor cadastrado!');
-    }
-    setIsModalOpen(false);
-    setEditingSupplier(null);
+  const handleSave = async (formData) => {
+    try {
+      if (editingSupplier) {
+        await updateSupplier(editingSupplier.id, formData);
+        toast.success('Fornecedor atualizado!');
+      } else {
+        await addSupplier(formData);
+        toast.success('Fornecedor cadastrado!');
+      }
+      setIsModalOpen(false);
+      setEditingSupplier(null);
+    } catch { toast.error('Erro ao salvar. Tente novamente.'); }
   };
 
   const handleEdit = (supplier) => {
@@ -74,10 +71,10 @@ export default function Suppliers() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Deseja realmente excluir este fornecedor?')) {
-      deleteSupplier(id);
-      toast.success('Fornecedor removido!');
+      try { await deleteSupplier(id); toast.success('Fornecedor removido!'); }
+      catch { toast.error('Erro ao remover. Tente novamente.'); }
     }
   };
 

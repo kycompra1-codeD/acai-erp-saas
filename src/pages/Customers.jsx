@@ -81,24 +81,28 @@ export default function Customers() {
     return orders.filter(o => o.customerId === selectedCustomer.id).slice(0, 10);
   }, [selectedCustomer, orders]);
 
-  const handleSave = (formData) => {
-    if (editingCustomer) {
-      updateCustomer(editingCustomer.id, formData);
-      toast.success('Cliente atualizado!');
-    } else {
-      addCustomer({ ...formData, id: Date.now().toString(), companyId, createdAt: new Date().toISOString(), points: 0, totalSpent: 0, ordersCount: 0 });
-      toast.success('Cliente cadastrado!');
-    }
-    setIsModalOpen(false);
-    setEditingCustomer(null);
+  const handleSave = async (formData) => {
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, formData);
+        toast.success('Cliente atualizado!');
+      } else {
+        await addCustomer(formData);
+        toast.success('Cliente cadastrado!');
+      }
+      setIsModalOpen(false);
+      setEditingCustomer(null);
+    } catch { toast.error('Erro ao salvar. Tente novamente.'); }
   };
 
   const handleEdit = (c) => { setEditingCustomer(c); setIsModalOpen(true); };
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-      deleteCustomer(id);
-      if (selectedCustomer?.id === id) setSelectedCustomer(null);
-      toast.success('Cliente excluído!');
+      try {
+        await deleteCustomer(id);
+        if (selectedCustomer?.id === id) setSelectedCustomer(null);
+        toast.success('Cliente excluído!');
+      } catch { toast.error('Erro ao remover. Tente novamente.'); }
     }
   };
 

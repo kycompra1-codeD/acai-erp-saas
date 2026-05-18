@@ -90,15 +90,20 @@ export default function Employees() {
   const openEdit = (emp) => { setEditingId(emp.id); setForm({ ...EMPTY, ...emp }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditingId(null); setForm({ ...EMPTY }); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name?.trim()) { toast.error('Nome é obrigatório'); return; }
     const data = { ...form, salary: Number(form.salary) || 0 };
-    if (editingId) { updateEmployee(editingId, data); toast.success('Funcionário atualizado!'); }
-    else { addEmployee(data); toast.success('Funcionário cadastrado!'); }
-    closeModal();
+    try {
+      if (editingId) { await updateEmployee(editingId, data); toast.success('Funcionário atualizado!'); }
+      else { await addEmployee(data); toast.success('Funcionário cadastrado!'); }
+      closeModal();
+    } catch { toast.error('Erro ao salvar. Tente novamente.'); }
   };
 
-  const handleDelete = () => { deleteEmployee(delId); setDelId(null); toast.success('Funcionário removido!'); };
+  const handleDelete = async () => {
+    try { await deleteEmployee(delId); setDelId(null); toast.success('Funcionário removido!'); }
+    catch { toast.error('Erro ao remover. Tente novamente.'); }
+  };
 
   const shiftEmoji = { manhã: '🌅', tarde: '☀️', noite: '🌙', integral: '🔄' };
 

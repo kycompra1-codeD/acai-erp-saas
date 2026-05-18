@@ -567,27 +567,28 @@ export default function Products() {
   };
   const closeModal = () => { setModal(null); setForm(EMPTY_PRODUCT); }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || (!form.categoryId && !form.category)) {
       toast.error('Preencha o nome e a categoria.');
       return;
     }
-    const data = { 
-      ...form, 
-      price: parseFloat(form.price) || 0, 
-      cost: parseFloat(form.cost || 0), 
-      stock: parseInt(form.stock || 0), 
-      minStock: parseInt(form.minStock || 0) 
+    const data = {
+      ...form,
+      price: parseFloat(form.price) || 0,
+      cost: parseFloat(form.cost || 0),
+      stock: parseInt(form.stock || 0),
+      minStock: parseInt(form.minStock || 0)
     };
-
-    if (modal === 'add') {
-      addProduct({ ...data, id: Date.now().toString() });
-      toast.success('Produto adicionado!');
-    } else {
-      updateProduct(modal.id, data);
-      toast.success('Produto atualizado!');
-    }
-    closeModal();
+    try {
+      if (modal === 'add') {
+        await addProduct(data);
+        toast.success('Produto adicionado!');
+      } else {
+        await updateProduct(modal.id, data);
+        toast.success('Produto atualizado!');
+      }
+      closeModal();
+    } catch { toast.error('Erro ao salvar produto.'); }
   };
 
   const handleFileUpload = (e) => {
@@ -641,18 +642,22 @@ export default function Products() {
   };
 
   const confirmDelete = (p) => setDeleteTarget(p);
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteTarget) {
-      deleteProduct(deleteTarget.id);
-      setDeleteTarget(null);
-      toast.success('Produto removido');
+      try {
+        await deleteProduct(deleteTarget.id);
+        setDeleteTarget(null);
+        toast.success('Produto removido');
+      } catch { toast.error('Erro ao remover produto.'); }
     }
   };
 
-  const toggleActive = (p) => {
+  const toggleActive = async (p) => {
     if (!p) return;
-    updateProduct(p.id, { active: !p.active });
-    toast.success(p.active ? 'Produto desativado' : 'Produto ativado');
+    try {
+      await updateProduct(p.id, { active: !p.active });
+      toast.success(p.active ? 'Produto desativado' : 'Produto ativado');
+    } catch { toast.error('Erro ao alterar status.'); }
   };
 
   // Helper for navigation
