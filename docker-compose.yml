@@ -88,6 +88,10 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-Zullya ERP <noreply@zullya.com.br>}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+      MP_PUBLIC_KEY: ${MP_PUBLIC_KEY:-}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+      APP_URL: ${APP_URL:-https://app.zullya.com.br}
     depends_on:
       postgres:
         condition: service_healthy
