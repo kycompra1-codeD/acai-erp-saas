@@ -238,7 +238,9 @@ CREATE TABLE IF NOT EXISTS insumos (
     unidade VARCHAR(20) DEFAULT 'unid',
     quantidade_atual NUMERIC(10,3) DEFAULT 0,
     quantidade_minima NUMERIC(10,3) DEFAULT 0,
-    custo NUMERIC(10,2) DEFAULT 0,
+    custo_unitario NUMERIC(10,2) DEFAULT 0,
+    categoria VARCHAR(100),
+    observacoes TEXT,
     fornecedor_id UUID REFERENCES fornecedores(id) ON DELETE SET NULL,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
