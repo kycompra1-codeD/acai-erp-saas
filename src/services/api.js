@@ -279,6 +279,45 @@ export const relatoriosApi = {
 };
 
 // ============================================================
+// CRM — oportunidades / pipeline
+// ============================================================
+export const crmApi = {
+  listar: (params = {}) => apiFetch('/crm?' + new URLSearchParams(params)),
+  resumo: () => apiFetch('/crm/resumo'),
+  criar: (dados) => apiFetch('/crm', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/crm/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  remover: (id) => apiFetch(`/crm/${id}`, { method: 'DELETE' }),
+};
+
+// ============================================================
+// Fiscal — notas_fiscais
+// ============================================================
+export const fiscalApi = {
+  listar: (params = {}) => apiFetch('/fiscal?' + new URLSearchParams(params)),
+  resumo: () => apiFetch('/fiscal/resumo'),
+  emitir: (dados) => apiFetch('/fiscal', { method: 'POST', body: JSON.stringify(dados) }),
+  cancelar: (id) => apiFetch(`/fiscal/${id}/cancelar`, { method: 'PUT' }),
+};
+
+// ============================================================
+// BI — analytics avançado
+// ============================================================
+export const biApi = {
+  dados: () => apiFetch('/bi'),
+};
+
+// ============================================================
+// Automações — regras_automacao
+// ============================================================
+export const automacoesApi = {
+  listar: () => apiFetch('/automacoes'),
+  criar: (dados) => apiFetch('/automacoes', { method: 'POST', body: JSON.stringify(dados) }),
+  editar: (id, dados) => apiFetch(`/automacoes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  remover: (id) => apiFetch(`/automacoes/${id}`, { method: 'DELETE' }),
+  toggle: (id) => apiFetch(`/automacoes/${id}/toggle`, { method: 'PUT' }),
+};
+
+// ============================================================
 // Health check (verifica se o backend está disponível)
 // ============================================================
 export const checkBackend = async () => {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown,
   AlertTriangle, Clock, Globe, FileText, Cpu, Crown
@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useApp } from '../contexts/AppContext';
 import { useAppearance } from '../contexts/AppearanceContext';
+import { dashboardApi } from '../services/api';
 import { format } from 'date-fns';
 
 const ORDER_STATUS_LABEL = {
@@ -45,22 +46,63 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { getDashboardStats, orders, inventory, settings } = useApp();
+  const { getDashboardStats, orders, inventory, settings, customers } = useApp();
   const { dashboardOrder } = useAppearance();
-  const stats = useMemo(() => getDashboardStats(), [getDashboardStats]);
+  const [apiStats, setApiStats] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    dashboardApi.kpis()
+      .then(res => { if (mounted && res?.dados) setApiStats(res.dados); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const stats = useMemo(() => {
+    if (apiStats) {
+      return {
+        todaySales: parseFloat(apiStats.vendas_hoje?.total ?? 0),
+        todayOrders: parseInt(apiStats.vendas_hoje?.quantidade ?? 0),
+        avgTicket: parseFloat(apiStats.ticket_medio ?? 0),
+        salesChange: 0,
+        pendingOrders: parseInt(apiStats.pedidos_pendentes ?? 0),
+        totalCustomers: customers.length,
+        lowStockCount: parseInt(apiStats.alertas_estoque ?? 0),
+        topProducts: (apiStats.top_produtos ?? []).map(p => ({
+          name: p.nome_produto,
+          qty: parseFloat(p.total_vendido),
+        })),
+      };
+    }
+    return getDashboardStats();
+  }, [apiStats, getDashboardStats, customers]);
+
   const chartData = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
+    const last7 = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
-      const dateStr = d.toDateString();
-      const dayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === dateStr && o.status !== 'cancelled');
       return {
+        dateStr: d.toISOString().slice(0, 10),
         date: d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
-        sales: dayOrders.reduce((s, o) => s + o.total, 0),
-        orders: dayOrders.length,
+        sales: 0,
+        orders: 0,
       };
     });
-  }, [orders]);
+    if (apiStats?.vendas_semana?.length > 0) {
+      apiStats.vendas_semana.forEach(row => {
+        const ds = String(row.dia).slice(0, 10);
+        const found = last7.find(d => d.dateStr === ds);
+        if (found) { found.sales = parseFloat(row.total); found.orders = parseInt(row.pedidos); }
+      });
+    } else {
+      last7.forEach(d => {
+        const dayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === new Date(d.dateStr + 'T12:00:00').toDateString() && o.status !== 'cancelled');
+        d.sales = dayOrders.reduce((s, o) => s + o.total, 0);
+        d.orders = dayOrders.length;
+      });
+    }
+    return last7;
+  }, [apiStats, orders]);
 
   const recentOrders = orders.slice(0, 6);
   const lowStockItems = inventory.filter(i => i.quantity <= i.minQuantity).slice(0, 4);

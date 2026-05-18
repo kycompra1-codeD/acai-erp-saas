@@ -49,8 +49,8 @@ export default function MyAccount() {
 
   // Estados dos formulários de dados cadastrais
   const [perfil, setPerfil] = useState({
-    nome: user?.name || 'Administrador Demo',
-    email: user?.email || 'admin@demo.com',
+    nome: user?.name || 'Administrador',
+    email: user?.email || '',
     celular: '(11) 99999-9999',
     senhaAtual: '',
     novaSenha: '',
@@ -554,9 +554,9 @@ export default function MyAccount() {
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-[1200px] mx-auto px-4">
                     {(planos.length > 0 ? planos : [
-                      { id: 'mock-starter', nome: 'Starter', descricao: 'Para começar a organizar suas vendas', valor_mensal: '59.00', destaque: false, max_usuarios: 1, trial_dias: 7, modulos: ['Vendas e PDV', 'Controle Financeiro', 'Cadastro de Produtos', '1 Usuário'] },
-                      { id: 'mock-pro', nome: 'Business PRO', descricao: 'O ERP completo para sua loja crescer', valor_mensal: '119.00', destaque: true, max_usuarios: 5, trial_dias: 15, modulos: ['Todos do Starter', 'Notas Fiscais (NF-e)', 'Múltiplos Usuários (Até 5)', 'Integração de Estoque', 'B.I. Avançado'] },
-                      { id: 'mock-enterprise', nome: 'Enterprise', descricao: 'Infraestrutura dedicada com suporte VIP', valor_mensal: '249.00', destaque: false, max_usuarios: 99, trial_dias: 30, modulos: ['Múltiplas Filiais', 'Usuários Ilimitados', 'API de Integração', 'Prioridade de Suporte', 'Expedição & Logística'] }
+                      { id: 'mock-starter', nome: 'Starter', descricao: 'Para começar a organizar suas vendas', valor_mensal: '97.00', destaque: false, max_usuarios: 3, trial_dias: 7, modulos: ['Vendas e PDV', 'Controle Financeiro', 'Cadastro de Produtos', '3 Usuários'] },
+                      { id: 'mock-pro', nome: 'Pro', descricao: 'O ERP completo para sua loja crescer', valor_mensal: '197.00', destaque: true, max_usuarios: 10, trial_dias: 15, modulos: ['Todos do Starter', 'Notas Fiscais (NF-e)', 'Múltiplos Usuários (Até 10)', 'Integração de Estoque', 'B.I. Avançado'] },
+                      { id: 'mock-enterprise', nome: 'Enterprise', descricao: 'Infraestrutura dedicada com suporte VIP', valor_mensal: '397.00', destaque: false, max_usuarios: 999, trial_dias: 30, modulos: ['Múltiplas Filiais', 'Usuários Ilimitados', 'API de Integração', 'Prioridade de Suporte', 'Expedição & Logística'] }
                     ]).map((plan) => {
                       const isCurrent = (assinatura?.plano_nome === plan.nome || empresa?.plano_nome === plan.nome) && tenantStatus === 'ativo';
                       const modulosArr = Array.isArray(plan.modulos)

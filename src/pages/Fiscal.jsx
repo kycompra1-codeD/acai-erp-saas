@@ -1,7 +1,7 @@
 // ============================================================
 // FISCAL — Zullya ERP
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText, Plus, Download, CheckCircle2, XCircle, Clock,
   Search, Eye, Printer, RefreshCw, AlertTriangle, DollarSign, Hash, Settings, Upload, Lock, ShieldCheck, Zap, Crown
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { format, subDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import { fiscalApi } from '../services/api';
 
 const INITIAL_NOTAS = [
   { id: 'nf7', tipo: 'NFC-e', numero: '000005', serie: '001', status: 'rejeitada',  valor: 14.50,  cliente: 'Consumidor Final',   emissao: new Date().toISOString(),            protocolo: null, motivo: 'Rejeição 778: Informado NCM inexistente' },
@@ -59,6 +60,30 @@ export default function Fiscal() {
   }
 
   const [notas, setNotas] = useState(INITIAL_NOTAS);
+  const [apiLoaded, setApiLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fiscalApi.listar().then(res => {
+      if (!mounted) return;
+      if (res?.dados?.length > 0) {
+        const mapped = res.dados.map(n => ({
+          id: n.id,
+          tipo: n.tipo,
+          numero: String(n.numero ?? '').padStart(6, '0'),
+          serie: n.serie ?? '001',
+          status: n.status,
+          valor: parseFloat(n.valor_total ?? 0),
+          cliente: n.destinatario ?? 'Consumidor Final',
+          emissao: n.emitida_em ?? n.criado_em,
+          protocolo: n.protocolo ?? null,
+        }));
+        setNotas(mapped);
+        setApiLoaded(true);
+      }
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
   const [search, setSearch] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -117,29 +142,46 @@ export default function Fiscal() {
 
   const totalAutorizadas = notas.filter(n => n.status === 'autorizada').reduce((s, n) => s + n.valor, 0);
 
-  const handleConfirmEmit = () => {
+  const handleConfirmEmit = async () => {
     setShowEmitModal(false);
     setEmitindo(true);
-    setTimeout(() => {
-      const numero = String(notas.length + 1).padStart(6, '0');
-      const nova = {
-        id: `nf${Date.now()}`,
-        tipo: emitForm.tipo, numero, serie: '001',
-        status: 'autorizada',
-        valor: parseFloat(emitForm.valor || 0),
-        cliente: emitForm.cliente || 'Consumidor Final',
-        emissao: new Date().toISOString(),
-        protocolo: `13526000${Date.now().toString().slice(-8)}`,
-      };
-      setNotas(prev => [nova, ...prev]);
+    try {
+      const res = await fiscalApi.emitir({
+        tipo: emitForm.tipo,
+        serie: '001',
+        valor_total: parseFloat(emitForm.valor || 0),
+        destinatario: emitForm.cliente || 'Consumidor Final',
+      });
+      if (res?.dados) {
+        const nova = {
+          id: res.dados.id,
+          tipo: res.dados.tipo,
+          numero: String(res.dados.numero ?? '').padStart(6, '0'),
+          serie: res.dados.serie ?? '001',
+          status: res.dados.status,
+          valor: parseFloat(res.dados.valor_total ?? 0),
+          cliente: res.dados.destinatario ?? 'Consumidor Final',
+          emissao: res.dados.emitida_em ?? res.dados.criado_em,
+          protocolo: res.dados.protocolo ?? null,
+        };
+        setNotas(prev => [nova, ...prev]);
+        toast.success(`${nova.tipo} ${nova.numero} emitida e autorizada!`);
+      }
+    } catch {
+      toast.error('Erro ao emitir nota fiscal.');
+    } finally {
       setEmitindo(false);
-      toast.success(`${nova.tipo} ${nova.numero} emitida e autorizada!`);
-    }, 2000);
+    }
   };
 
-  const cancelar = (id) => {
-    setNotas(prev => prev.map(n => n.id === id ? { ...n, status: 'cancelada' } : n));
-    toast.error('Nota cancelada.');
+  const cancelar = async (id) => {
+    try {
+      await fiscalApi.cancelar(id);
+      setNotas(prev => prev.map(n => n.id === id ? { ...n, status: 'cancelada' } : n));
+      toast.success('Nota cancelada com sucesso.');
+    } catch {
+      toast.error('Erro ao cancelar nota.');
+    }
   };
 
   return (

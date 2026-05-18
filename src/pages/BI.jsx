@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   ComposedChart, Line, Area, Legend
@@ -7,17 +7,78 @@ import {
   TrendingUp, Activity, BarChart2, Filter, Download, Zap, BrainCircuit, Target, Users 
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { biApi } from '../services/api';
+
+const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function mapBIData(raw) {
+  // Forecast: tendencia → {date, sales, projected}
+  const salesByDate = {};
+  (raw.tendencia ?? []).forEach(r => {
+    const d = String(r.data ?? '').slice(0, 10);
+    salesByDate[d] = parseFloat(r.faturamento ?? 0);
+  });
+  const sortedDates = Object.keys(salesByDate).sort();
+  const forecast = sortedDates.map((d, i) => ({
+    date: d.slice(5), // MM-DD
+    sales: salesByDate[d],
+    projected: null,
+    isFuture: false,
+  }));
+  // Simple moving average for last 7 days as projection
+  if (forecast.length >= 3) {
+    const last3 = forecast.slice(-3).map(f => f.sales);
+    const avg = last3.reduce((s, v) => s + v, 0) / last3.length;
+    for (let i = 1; i <= 7; i++) {
+      forecast.push({ date: `+${i}d`, sales: null, projected: Math.round(avg * (1 + i * 0.02)), isFuture: true });
+    }
+  }
+
+  // Heatmap: pivot hora x dia_semana
+  const heatGrid = {};
+  (raw.heatmap ?? []).forEach(r => {
+    const h = `${String(r.hora).padStart(2, '0')}h`;
+    if (!heatGrid[h]) heatGrid[h] = { hour: h };
+    const dia = DIAS_SEMANA[parseInt(r.dia_semana)] ?? 'Dom';
+    heatGrid[h][dia] = (heatGrid[h][dia] || 0) + parseInt(r.pedidos ?? 0);
+  });
+  const heatmap = Object.values(heatGrid).sort((a, b) => a.hour.localeCompare(b.hour));
+
+  // Channels
+  const channels = (raw.por_canal ?? []).map(c => ({
+    name: c.canal === 'mesa' ? 'Mesa' : c.canal === 'delivery' ? 'Delivery' : c.canal === 'balcao' ? 'Balcão' : c.canal,
+    volume: parseInt(c.pedidos ?? 0),
+  }));
+
+  // Cohort: kept empty (not computed by backend)
+  const cohort = [];
+
+  return { forecast, heatmap, channels, cohort };
+}
 
 export default function BI() {
   const { getAdvancedBIStats, settings } = useApp();
   const [period, setPeriod] = useState(30);
+  const [apiData, setApiData] = useState(null);
 
-  // Retrieve advanced data from context based on the period filter
+  useEffect(() => {
+    let mounted = true;
+    biApi.dados().then(res => {
+      if (mounted && res?.dados) setApiData(res.dados);
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   const stats = useMemo(() => {
-    return getAdvancedBIStats ? getAdvancedBIStats(period) : {
-      forecast: [], heatmap: [], channels: [], cohort: []
-    };
-  }, [getAdvancedBIStats, period]);
+    if (apiData) {
+      const mapped = mapBIData(apiData);
+      if ((!mapped.cohort || mapped.cohort.length === 0) && getAdvancedBIStats) {
+        mapped.cohort = getAdvancedBIStats(period).cohort;
+      }
+      return mapped;
+    }
+    return getAdvancedBIStats ? getAdvancedBIStats(period) : { forecast: [], heatmap: [], channels: [], cohort: [] };
+  }, [apiData, getAdvancedBIStats, period]);
 
   const { forecast, heatmap, channels, cohort } = stats;
 

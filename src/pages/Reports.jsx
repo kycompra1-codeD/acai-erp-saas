@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Download, Filter, Grape, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { relatoriosApi } from '../services/api';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -57,6 +58,7 @@ export default function Reports() {
   const [rangeMode, setRangeMode] = useState('7d'); // '7d' | '30d' | 'custom'
   const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 6), 'yyyy-MM-dd'));
   const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [apiData, setApiData] = useState(null);
 
   // Compute effective range
   const { start, end } = useMemo(() => {
@@ -72,6 +74,25 @@ export default function Reports() {
       end: endOfDay(new Date()),
     };
   }, [rangeMode, dateFrom, dateTo]);
+
+  useEffect(() => {
+    let mounted = true;
+    const params = {
+      data_inicio: format(start, 'yyyy-MM-dd'),
+      data_fim: format(end, 'yyyy-MM-dd'),
+    };
+    Promise.all([
+      relatoriosApi.vendas(params).catch(() => null),
+      relatoriosApi.financeiro(params).catch(() => null),
+      relatoriosApi.produtos(params).catch(() => null),
+    ]).then(([vendas, financeiro, produtos]) => {
+      if (!mounted) return;
+      if (vendas?.dados || financeiro?.dados || produtos?.dados) {
+        setApiData({ vendas: vendas?.dados ?? null, financeiro: financeiro?.dados ?? null, produtos: produtos?.dados ?? null });
+      }
+    });
+    return () => { mounted = false; };
+  }, [start, end]);
 
   const periodOrders = useMemo(() => {
     return orders.filter(o => {
@@ -93,6 +114,33 @@ export default function Reports() {
 
   const salesData = useMemo(() => {
     const interval = eachDayOfInterval({ start, end });
+
+    if (apiData?.vendas?.por_periodo?.length > 0 || apiData?.financeiro?.fluxo?.length > 0) {
+      const vendasMap = {};
+      (apiData.vendas?.por_periodo ?? []).forEach(r => {
+        const k = String(r.dia ?? r.data ?? '').slice(0, 10);
+        vendasMap[k] = { vendas: parseFloat(r.total ?? 0), pedidos: parseInt(r.pedidos ?? 0) };
+      });
+      const finMap = {};
+      (apiData.financeiro?.fluxo ?? []).forEach(r => {
+        const k = String(r.dia ?? r.data ?? '').slice(0, 10);
+        finMap[k] = { entradas: parseFloat(r.entradas ?? 0), saidas: parseFloat(r.saidas ?? 0) };
+      });
+      return interval.map(date => {
+        const k = format(date, 'yyyy-MM-dd');
+        const v = vendasMap[k] ?? { vendas: 0, pedidos: 0 };
+        const f = finMap[k] ?? { entradas: 0, saidas: 0 };
+        return {
+          name: format(date, 'dd/MM'),
+          vendas: v.vendas,
+          entradas: f.entradas + v.vendas,
+          saidas: f.saidas,
+          saldo: f.entradas + v.vendas - f.saidas,
+          pedidos: v.pedidos,
+        };
+      });
+    }
+
     return interval.map(date => {
       const dayOrders = periodOrders.filter(o => safeIsSameDay(o.createdAt, date));
       const dayEntries = financeEntries.filter(f => safeIsSameDay(f.date, date));
@@ -108,7 +156,7 @@ export default function Reports() {
         pedidos: dayOrders.length,
       };
     });
-  }, [periodOrders, financeEntries, start, end]);
+  }, [apiData, periodOrders, financeEntries, start, end]);
 
   const categoryData = useMemo(() => {
     const cats = {};
@@ -125,12 +173,15 @@ export default function Reports() {
   }, [periodOrders]);
 
   const topProducts = useMemo(() => {
+    if (apiData?.produtos?.produto?.length > 0) {
+      return apiData.produtos.produto.slice(0, 5).map(p => ({ name: p.nome_produto ?? p.nome, value: parseFloat(p.quantidade ?? p.total ?? 0) }));
+    }
     const prods = {};
     periodOrders.forEach(o => {
       o.items?.forEach(i => { prods[i.name] = (prods[i.name] || 0) + i.quantity; });
     });
     return Object.entries(prods).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
-  }, [periodOrders]);
+  }, [apiData, periodOrders]);
 
   const [tab, setTab] = useState('performance'); // 'performance' | 'dre'
 

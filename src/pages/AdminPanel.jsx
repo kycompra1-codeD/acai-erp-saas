@@ -772,19 +772,27 @@ export default function AdminPanel() {
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem('zullya_admin_token');
-      if (!token) { navigate('/admin/login'); return; }
+      if (!token || token === 'demo-admin-token') {
+        localStorage.removeItem('zullya_admin_token');
+        localStorage.removeItem('zullya_admin');
+        navigate('/admin/login');
+        return;
+      }
 
-      // Se for token demo, entra direto no modo demo
-      const isDemoToken = token === 'demo-admin-token';
-      const online = isDemoToken ? false : await checkBackend();
+      const online = await checkBackend();
+      setModoDemo(false);
       
-      setModoDemo(!online || isDemoToken);
-      
+      if (!online) {
+        toast.error('Erro de conexão com a API na VPS Hostinger.', { icon: '⚠️' });
+        navigate('/admin/login');
+        return;
+      }
+
       // Carregar
       await Promise.all([
-        carregarStats(!online || isDemoToken),
-        carregarTenants(!online || isDemoToken),
-        carregarPlanos(!online || isDemoToken)
+        carregarStats(false),
+        carregarTenants(false),
+        carregarPlanos(false)
       ]);
       setLoading(false);
     };

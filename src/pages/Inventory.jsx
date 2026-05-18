@@ -18,7 +18,7 @@ const EMPTY_ITEM = { name: '', unit: 'kg', quantity: '', minQuantity: '', cost: 
 const LOSS_REASONS = ['Perda/Avaria', 'Vencimento', 'Consumo Interno', 'Ajuste de Inventário', 'Outro'];
 
 export default function Inventory() {
-  const { inventory, updateInventoryItem, addInventoryItem, addInventoryStock } = useApp();
+  const { inventory, updateInventoryItem, addInventoryItem, addInventoryStock, loadItemMovements, adjustInventoryStock } = useApp();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [modal, setModal] = useState(null); // null | 'add' | item
@@ -74,7 +74,13 @@ export default function Inventory() {
     else newQty = qty;
 
     try {
-      await updateInventoryItem(adjModal.id, { quantity: newQty, lastUpdate: new Date().toISOString() });
+      await adjustInventoryStock(adjModal.id, {
+        type: adjMode,
+        qty,
+        newQty,
+        reason: adjMode === 'saida' ? adjReason : (adjMode === 'entrada' ? 'Entrada manual' : 'Acerto de saldo'),
+        note: adjNote
+      });
       const modeLabel = { entrada: '✅ Entrada', saida: '📉 Saída/Perda', acerto: '✏️ Acerto' }[adjMode];
       toast.success(`${modeLabel}: ${adjModal.name} — Novo saldo: ${newQty} ${adjModal.unit}`);
       setAdjModal(null); setAdjQty(''); setAdjReason(LOSS_REASONS[0]); setAdjNote('');
@@ -161,12 +167,17 @@ export default function Inventory() {
                 <tr key={item.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{item.name}</div>
-                    {item.movements?.length > 0 && (
-                      <button onClick={() => setMovModal(item)} style={{ fontSize: 10, color: 'var(--primary-light)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2 }}>
-                        <ClipboardList size={10} style={{ display: 'inline', marginRight: 2 }} />
-                        {item.movements.length} movimentações
-                      </button>
-                    )}
+                    <button onClick={async () => {
+                      try {
+                        const movements = await loadItemMovements(item.id);
+                        setMovModal({ ...item, movements });
+                      } catch {
+                        toast.error('Erro ao carregar histórico');
+                      }
+                    }} style={{ fontSize: 10, color: 'var(--primary-light)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <ClipboardList size={10} />
+                      {item.movements?.length > 0 ? `${item.movements.length} movimentações` : 'Ver histórico'}
+                    </button>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.supplier || '—'}</td>
                   <td>

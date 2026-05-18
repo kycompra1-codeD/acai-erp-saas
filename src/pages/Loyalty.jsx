@@ -12,14 +12,6 @@ export default function Loyalty() {
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
 
-  // Mock Loyalty Stats
-  const stats = [
-    { label: 'Clientes no Programa', value: '1.240', icon: Users, color: 'var(--primary)' },
-    { label: 'Pontos Acumulados', value: '45.820', icon: Star, color: 'var(--warning)' },
-    { label: 'Cashback Resgatado', value: 'R$ 3.420', icon: Coins, color: 'var(--success)' },
-    { label: 'Taxa de Retenção', value: '84%', icon: TrendingUp, color: 'var(--info)' },
-  ];
-
   const loyaltySettings = settings?.loyalty || {
     enabled: true,
     pointsPerReal: 1,
@@ -27,6 +19,26 @@ export default function Loyalty() {
     cashbackPercent: 5,
     expiryDays: 90
   };
+
+  // Dynamic Loyalty Stats
+  const stats = useMemo(() => {
+    const totalPoints = (customers || []).reduce((sum, c) => {
+      const pts = c.points || Math.floor((c.totalSpent || 0) * loyaltySettings.pointsPerReal);
+      return sum + pts;
+    }, 0);
+
+    const totalCashback = (customers || []).reduce((sum, c) => {
+      const cb = ((c.totalSpent || 0) * loyaltySettings.cashbackPercent) / 100;
+      return sum + cb;
+    }, 0);
+
+    return [
+      { label: 'Clientes no Programa', value: (customers || []).length, icon: Users, color: 'var(--primary)' },
+      { label: 'Pontos Acumulados', value: totalPoints.toLocaleString('pt-BR'), icon: Star, color: 'var(--warning)' },
+      { label: 'Cashback Disponível', value: `R$ ${totalCashback.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Coins, color: 'var(--success)' },
+      { label: 'Taxa de Retenção', value: '84%', icon: TrendingUp, color: 'var(--info)' },
+    ];
+  }, [customers, loyaltySettings]);
 
   const handleUpdateSetting = (key, value) => {
     if (!updateSettings) return;
@@ -117,24 +129,42 @@ export default function Loyalty() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCustomers.map((c, i) => (
-                        <tr key={i}>
-                          <td>
-                            <div className="font-bold">{c.name}</div>
-                            <div className="text-xs text-muted">{c.phone}</div>
-                          </td>
-                          <td>
-                            <span className={`badge ${i < 3 ? 'badge-primary' : 'badge-muted'}`}>
-                              {i === 0 ? '🏆 Diamante' : i < 3 ? '🥈 Ouro' : '🥉 Prata'}
-                            </span>
-                          </td>
-                          <td className="font-bold">{(1200 - (i * 100))} pts</td>
-                          <td className="text-success font-bold">R$ {(50 - (i * 5)).toFixed(2)}</td>
-                          <td>
-                            <button className="btn btn-ghost btn-sm">Ver Perfil</button>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredCustomers.map((c, i) => {
+                        const pts = c.points || Math.floor((c.totalSpent || 0) * loyaltySettings.pointsPerReal);
+                        const cb = ((c.totalSpent || 0) * loyaltySettings.cashbackPercent) / 100;
+                        
+                        let badgeLabel = '🥉 Bronze';
+                        let badgeClass = 'badge-muted';
+                        if (pts >= 1000) {
+                          badgeLabel = '💎 Diamante';
+                          badgeClass = 'badge-primary';
+                        } else if (pts >= 500) {
+                          badgeLabel = '🥇 Ouro';
+                          badgeClass = 'badge-warning';
+                        } else if (pts >= 200) {
+                          badgeLabel = '🥈 Prata';
+                          badgeClass = 'badge-info';
+                        }
+
+                        return (
+                          <tr key={c.id || i}>
+                            <td>
+                              <div className="font-bold">{c.name}</div>
+                              <div className="text-xs text-muted">{c.phone}</div>
+                            </td>
+                            <td>
+                              <span className={`badge ${badgeClass}`}>
+                                {badgeLabel}
+                              </span>
+                            </td>
+                            <td className="font-bold">{pts} pts</td>
+                            <td className="text-success font-bold">R$ {cb.toFixed(2)}</td>
+                            <td>
+                              <button className="btn btn-ghost btn-sm" onClick={() => toast(`Perfil de ${c.name}`, { icon: '👤' })}>Ver Perfil</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -1,7 +1,7 @@
 // ============================================================
 // CRM — Zullya ERP
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { 
   X, Plus, Trash2, CheckCircle2, FileDown, 
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { subDays, differenceInDays, format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { crmApi } from '../services/api';
 
 const CUSTOMERS = [
   { id: 'c1', name: 'Ana Beatriz',   phone: '(11) 99999-1111', email: 'ana@email.com',    totalSpent: 1240.80, ordersCount: 42, lastPurchase: subDays(new Date(), 3).toISOString(),  tags: ['VIP', 'Fiel'] },
@@ -25,11 +26,12 @@ const CUSTOMERS = [
   { id: 'c10',name: 'Rafael Torres', phone: '(11) 99998-0002', email: null,               totalSpent: 320.00,  ordersCount: 12, lastPurchase: subDays(new Date(), 90).toISOString(), tags: ['Inativo'] },
 ];
 
-const PIPELINE = [
-  { id: 'lead',    label: 'Lead',    color: '#6B7280', items: ['Helena Martins','Rafael Torres'] },
-  { id: 'contact', label: 'Contato', color: 'var(--info)', items: ['Gabriel Santos','Lucas Pereira'] },
-  { id: 'proposal',label: 'Proposta',color: 'var(--warning)', items: ['Carlos Eduardo'] },
-  { id: 'closed',  label: 'Fechado', color: 'var(--success)', items: ['Ana Beatriz','Fernanda Lima','Juliana Costa'] },
+const ETAPAS = [
+  { id: 'lead',         label: 'Lead',       color: '#6B7280' },
+  { id: 'contato',      label: 'Contato',    color: 'var(--info)' },
+  { id: 'proposta',     label: 'Proposta',   color: 'var(--warning)' },
+  { id: 'negociacao',   label: 'Negociação', color: 'var(--accent)' },
+  { id: 'fechado_ganho',label: 'Fechado',    color: 'var(--success)' },
 ];
 
 const TAG_STYLES = {
@@ -53,10 +55,37 @@ export default function CRM() {
     customers = [], proposals = [], addProposal, updateProposalStatus, 
     convertProposalToOrder, products = [], settings
   } = useApp();
+  const [oportunidades, setOportunidades] = useState([]);
+  const [novaOp, setNovaOp] = useState({ titulo: '', valor: '', etapa: 'lead', probabilidade: 50, notas: '' });
+  const [showOpModal, setShowOpModal] = useState(false);
+  const [selectedOp, setSelectedOp] = useState(null);
+  const [showEditOpModal, setShowEditOpModal] = useState(false);
   const [search, setSearch] = useState('');
   const [segment, setSegment] = useState('all');
   const [tab, setTab] = useState('clientes');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleMoveOpportunity = async (id, newEtapa) => {
+    // Optimistic update
+    setOportunidades(prev => prev.map(o => o.id === id ? { ...o, etapa: newEtapa } : o));
+    try {
+      await crmApi.editar(id, { etapa: newEtapa });
+    } catch {
+      toast.error('Erro ao atualizar etapa da oportunidade.');
+      // Revert/refresh state on error
+      crmApi.listar().then(res => {
+        if (res?.dados) setOportunidades(res.dados);
+      });
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    crmApi.listar().then(res => {
+      if (mounted && res?.dados) setOportunidades(res.dados);
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   // Form State for New Proposal
   const [newProp, setNewProp] = useState({
@@ -130,10 +159,10 @@ export default function CRM() {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { icon: Users,        color: 'var(--primary-light)', bg: 'var(--primary-glow)', value: CUSTOMERS.length, label: 'Total Clientes', borderColor: 'var(--primary-light)' },
-          { icon: Star,         color: '#F59E0B',              bg: 'rgba(245,158,11,0.15)', value: 4,             label: 'Clientes VIP', borderColor: '#F59E0B' },
-          { icon: TrendingUp,   color: 'var(--success)',       bg: 'var(--success-bg)',   value: `R$${(totalRevenue/totalOrders).toFixed(0)}`, label: 'Ticket Médio', borderColor: 'var(--success)' },
-          { icon: AlertCircle,  color: 'var(--danger)',        bg: 'var(--danger-bg)',    value: 3,               label: 'Em Risco/Inativos', borderColor: 'var(--danger)' },
+          { icon: Users,        color: 'var(--primary-light)', bg: 'var(--primary-glow)', value: customers.length, label: 'Total Clientes', borderColor: 'var(--primary-light)' },
+          { icon: Star,         color: '#F59E0B',              bg: 'rgba(245,158,11,0.15)', value: customers.filter(c => (c.tags || []).includes('VIP')).length, label: 'Clientes VIP', borderColor: '#F59E0B' },
+          { icon: TrendingUp,   color: 'var(--success)',       bg: 'var(--success-bg)',   value: totalOrders > 0 ? `R$ ${(totalRevenue/totalOrders).toFixed(0)}` : 'R$ 0', label: 'Ticket Médio', borderColor: 'var(--success)' },
+          { icon: AlertCircle,  color: 'var(--danger)',        bg: 'var(--danger-bg)',    value: customers.filter(c => (c.tags || []).some(t => t === 'Em Risco' || t === 'Inativo')).length, label: 'Em Risco/Inativos', borderColor: 'var(--danger)' },
         ].map(({ icon: Icon, color, bg, value, label, borderColor }) => (
           <div key={label} style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
@@ -270,28 +299,98 @@ export default function CRM() {
 
       {/* Pipeline Kanban */}
       {tab === 'pipeline' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          {PIPELINE.map(col => (
-            <div key={col.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', borderTop: `3px solid ${col.color}` }}>
-                <div style={{ fontWeight: 700 }}>{col.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{col.items.length} contatos</div>
-              </div>
-              <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {col.items.map(name => (
-                  <div key={name} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = col.color}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                    onClick={() => toast(`${name}`, { icon: '📋' })}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                      <ShoppingBag size={10} style={{ display: 'inline', marginRight: 4 }} />Cliente ativo
-                    </div>
+        <div>
+          <div className="flex justify-end mb-4">
+            <button className="btn btn-primary btn-sm" onClick={() => setShowOpModal(true)}>
+              <Plus size={14} /> Nova Oportunidade
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+            {ETAPAS.map(col => {
+              const items = oportunidades.filter(o => o.etapa === col.id);
+              const total = items.reduce((s, o) => s + parseFloat(o.valor || 0), 0);
+              return (
+                <div 
+                  key={col.id} 
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    const id = e.dataTransfer.getData('text/plain');
+                    handleMoveOpportunity(id, col.id);
+                  }}
+                >
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', borderTop: `3px solid ${col.color}` }}>
+                    <div style={{ fontWeight: 700 }}>{col.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{items.length} • R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                   </div>
-                ))}
+                  <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map(op => (
+                      <div 
+                        key={op.id} 
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData('text/plain', op.id);
+                        }}
+                        onClick={() => {
+                          setSelectedOp(op);
+                          setShowEditOpModal(true);
+                        }}
+                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = col.color}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{op.titulo}</div>
+                        {op.cliente_nome && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{op.cliente_nome}</div>}
+                        <div style={{ fontSize: 11, color: 'var(--success)', fontWeight: 700, marginTop: 4 }}>
+                          R$ {parseFloat(op.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> • {op.probabilidade}%</span>
+                        </div>
+                      </div>
+                    ))}
+                    {items.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '20px 0', fontSize: 12, color: 'var(--text-muted)', opacity: 0.5 }}>Vazio</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {showOpModal && (
+            <div className="modal-overlay" onClick={() => setShowOpModal(false)}>
+              <div className="modal-content glass" style={{ width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title">Nova Oportunidade</h2>
+                  <button className="btn-close" onClick={() => setShowOpModal(false)}><X size={20} /></button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group"><label className="form-label">Título *</label>
+                    <input className="input-field" value={novaOp.titulo} onChange={e => setNovaOp(p => ({...p, titulo: e.target.value}))} /></div>
+                  <div className="grid-2">
+                    <div className="form-group"><label className="form-label">Valor (R$)</label>
+                      <input className="input-field" type="number" value={novaOp.valor} onChange={e => setNovaOp(p => ({...p, valor: e.target.value}))} /></div>
+                    <div className="form-group"><label className="form-label">Probabilidade (%)</label>
+                      <input className="input-field" type="number" min="0" max="100" value={novaOp.probabilidade} onChange={e => setNovaOp(p => ({...p, probabilidade: Number(e.target.value)}))} /></div>
+                  </div>
+                  <div className="form-group"><label className="form-label">Etapa</label>
+                    <select className="input-field" value={novaOp.etapa} onChange={e => setNovaOp(p => ({...p, etapa: e.target.value}))}>
+                      {ETAPAS.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                    </select></div>
+                  <div className="form-group"><label className="form-label">Notas</label>
+                    <textarea className="input-field" rows="2" value={novaOp.notas} onChange={e => setNovaOp(p => ({...p, notas: e.target.value}))} /></div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setShowOpModal(false)}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={async () => {
+                    if (!novaOp.titulo.trim()) { toast.error('Título é obrigatório'); return; }
+                    try {
+                      const res = await crmApi.criar({ ...novaOp, valor: parseFloat(novaOp.valor) || 0 });
+                      if (res?.dados) { setOportunidades(prev => [res.dados, ...prev]); toast.success('Oportunidade criada!'); setShowOpModal(false); setNovaOp({ titulo: '', valor: '', etapa: 'lead', probabilidade: 50, notas: '' }); }
+                    } catch { toast.error('Erro ao criar oportunidade.'); }
+                  }}>Criar</button>
+                </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -483,6 +582,105 @@ export default function CRM() {
               <div className="flex gap-2">
                 <button className="btn btn-ghost" onClick={() => setIsModalOpen(false)}>Cancelar</button>
                 <button className="btn btn-primary" onClick={handleAddProposal}>Salvar Orçamento</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Editar Oportunidade */}
+      {showEditOpModal && selectedOp && (
+        <div className="modal-overlay" onClick={() => { setShowEditOpModal(false); setSelectedOp(null); }}>
+          <div className="modal-content glass" style={{ width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Editar Oportunidade</h2>
+              <button className="btn-close" onClick={() => { setShowEditOpModal(false); setSelectedOp(null); }}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Título *</label>
+                <input 
+                  className="input-field" 
+                  value={selectedOp.titulo} 
+                  onChange={e => setSelectedOp(p => ({...p, titulo: e.target.value}))} 
+                />
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Valor (R$)</label>
+                  <input 
+                    className="input-field" 
+                    type="number" 
+                    value={selectedOp.valor} 
+                    onChange={e => setSelectedOp(p => ({...p, valor: e.target.value}))} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Probabilidade (%)</label>
+                  <input 
+                    className="input-field" 
+                    type="number" 
+                    min="0" 
+                    max="100" 
+                    value={selectedOp.probabilidade} 
+                    onChange={e => setSelectedOp(p => ({...p, probabilidade: Number(e.target.value)}))} 
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Etapa</label>
+                <select 
+                  className="input-field" 
+                  value={selectedOp.etapa} 
+                  onChange={e => setSelectedOp(p => ({...p, etapa: e.target.value}))}
+                >
+                  {ETAPAS.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Notas</label>
+                <textarea 
+                  className="input-field" 
+                  rows="2" 
+                  value={selectedOp.notas || ''} 
+                  onChange={e => setSelectedOp(p => ({...p, notas: e.target.value}))} 
+                />
+              </div>
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={async () => {
+                if (window.confirm(`Tem certeza que deseja excluir a oportunidade "${selectedOp.titulo}"?`)) {
+                  try {
+                    await crmApi.remover(selectedOp.id);
+                    setOportunidades(prev => prev.filter(o => o.id !== selectedOp.id));
+                    toast.success('Oportunidade removida com sucesso!');
+                    setShowEditOpModal(false);
+                    setSelectedOp(null);
+                  } catch {
+                    toast.error('Erro ao excluir oportunidade.');
+                  }
+                }
+              }}>
+                Excluir
+              </button>
+              <div className="flex gap-2">
+                <button className="btn btn-ghost" onClick={() => { setShowEditOpModal(false); setSelectedOp(null); }}>Cancelar</button>
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!selectedOp.titulo.trim()) { toast.error('Título é obrigatório'); return; }
+                  try {
+                    const res = await crmApi.editar(selectedOp.id, {
+                      ...selectedOp,
+                      valor: parseFloat(selectedOp.valor) || 0
+                    });
+                    if (res?.dados) {
+                      setOportunidades(prev => prev.map(o => o.id === selectedOp.id ? res.dados : o));
+                      toast.success('Oportunidade atualizada!');
+                      setShowEditOpModal(false);
+                      setSelectedOp(null);
+                    }
+                  } catch {
+                    toast.error('Erro ao editar oportunidade.');
+                  }
+                }}>Salvar</button>
               </div>
             </div>
           </div>

@@ -325,7 +325,10 @@ function CategoryTreeNode({ node, level, onAdd, onEdit, onDelete, onMove, expand
 }
 
 export default function Products() {
-  const { products, addProduct, updateProduct, deleteProduct } = useApp();
+  const { 
+    products, addProduct, updateProduct, deleteProduct,
+    categoriesList, addCategory: contextAddCategory, updateCategory: contextUpdateCategory, deleteCategory: contextDeleteCategory, saveCats
+  } = useApp();
   const fileInputRef = useRef(null);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
@@ -338,49 +341,7 @@ export default function Products() {
   const [tempMediaUrl, setTempMediaUrl] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [categoriesList, setCategoriesList] = useState(() => {
-    let cats = DEFAULT_CATEGORIES;
-    try {
-      const legacy = localStorage.getItem(CATEGORIES_STORAGE_KEY_LEGACY);
-      if (legacy) {
-        localStorage.setItem(CATEGORIES_STORAGE_KEY, legacy);
-        localStorage.removeItem(CATEGORIES_STORAGE_KEY_LEGACY);
-      }
-      const s = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      if (s) cats = JSON.parse(s);
-    } catch {}
 
-    // Migration to flat structure
-    if (cats.length > 0 && cats[0].subcategories !== undefined) {
-      const flat = [];
-      cats.forEach((c, i) => {
-        const catId = c.key || c.id || `cat_${Date.now()}_${i}`;
-        flat.push({
-          id: catId,
-          label: c.label,
-          emoji: c.emoji || '🏷️',
-          image: c.image || null,
-          parentId: null,
-          order: i,
-        });
-        if (c.subcategories && c.subcategories.length > 0) {
-          c.subcategories.forEach((sub, j) => {
-            flat.push({
-              id: sub.key || sub.id || `sub_${Date.now()}_${i}_${j}`,
-              label: sub.label,
-              emoji: sub.emoji || '🏷️',
-              image: sub.image || null,
-              parentId: catId,
-              order: j,
-            });
-          });
-        }
-      });
-      try { localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(flat)); } catch {}
-      return flat;
-    }
-    return cats;
-  });
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatForm, setNewCatForm] = useState({ label: '', emoji: '🏷️', image: null });
   const [editingCatId, setEditingCatId] = useState(null);
@@ -393,11 +354,6 @@ export default function Products() {
   const [dragPosition, setDragPosition] = useState(null);
 
   const toggleExpand = (id) => setExpandedNodes(p => ({ ...p, [id]: !p[id] }));
-
-  const saveCats = (cats) => {
-    setCategoriesList(cats);
-    try { localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(cats)); } catch {}
-  };
 
   const getTree = () => {
     const map = {};
@@ -430,46 +386,34 @@ export default function Products() {
     return depth;
   };
 
-  const addCategory = (parentId = null) => {
+  const addCategory = async (parentId = null) => {
     if (!newCatForm.label.trim()) { toast.error('Nome obrigatório'); return; }
     if (parentId && getDepth(parentId) >= 4) { toast.error('Limite máximo de 3 níveis de subcategoria atingido'); return; }
-    
-    const id = `cat_${Date.now()}`;
-    const siblings = categoriesList.filter(c => c.parentId === parentId);
-    const order = siblings.length > 0 ? Math.max(...siblings.map(s => s.order)) + 1 : 0;
-    
-    saveCats([...categoriesList, { 
-      id, 
-      label: newCatForm.label.trim(), 
-      emoji: newCatForm.emoji || '🏷️', 
-      image: newCatForm.image || null,
-      parentId, 
-      order 
-    }]);
-    setNewCatForm({ label: '', emoji: '🏷️', image: null });
-    toast.success(parentId ? 'Subcategoria criada!' : 'Categoria criada!');
-  };
-
-  const updateCategory = (id, updates) => {
-    saveCats(categoriesList.map(c => c.id === id ? { ...c, ...updates } : c));
-  };
-
-  const deleteCategory = (id) => {
-    if (DEFAULT_CATEGORIES.find(c => c.id === id)) { toast.error('Não é possível remover categorias padrão'); return; }
-    // Deleta também os filhos recursivamente
-    const idsToDelete = new Set([id]);
-    let added = true;
-    while (added) {
-      added = false;
-      for (const c of categoriesList) {
-        if (idsToDelete.has(c.parentId) && !idsToDelete.has(c.id)) {
-          idsToDelete.add(c.id);
-          added = true;
-        }
-      }
+    try {
+      await contextAddCategory(parentId, newCatForm);
+      setNewCatForm({ label: '', emoji: '🏷️', image: null });
+      toast.success(parentId ? 'Subcategoria criada!' : 'Categoria criada!');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao criar categoria');
     }
-    saveCats(categoriesList.filter(c => !idsToDelete.has(c.id)));
-    toast.success('Categoria e dependentes removidos');
+  };
+
+  const updateCategory = async (id, updates) => {
+    try {
+      await contextUpdateCategory(id, updates);
+    } catch (err) {
+      toast.error('Erro ao atualizar categoria');
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    if (DEFAULT_CATEGORIES.find(c => c.id === id)) { toast.error('Não é possível remover categorias padrão'); return; }
+    try {
+      await contextDeleteCategory(id);
+      toast.success('Categoria e dependentes removidos');
+    } catch (err) {
+      toast.error('Erro ao remover categoria');
+    }
   };
 
   const moveCategory = (dragId, targetId, position) => {

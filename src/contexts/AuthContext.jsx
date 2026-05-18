@@ -40,13 +40,7 @@ export const PERMISSIONS = {
   ],
 };
 
-// Usuários demo (fallback quando backend offline)
-const DEMO_USERS = [
-  {
-    id: 'demo-1', nome: 'Admin Demo', email: 'admin@demo.com',
-    nivel_permissao: 'admin_demo', empresa: { nome_empresa: 'Empresa Demo', status: 'trial' },
-  },
-];
+
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -75,15 +69,12 @@ export function AuthProvider({ children }) {
           }
         }
       } else {
-        // Backend offline — tentar sessão demo salva
-        const saved = localStorage.getItem('zullya_auth');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            setUser(parsed);
-            setModoDemo(true);
-          } catch { /* ignorar */ }
-        }
+        // Backend offline — limpar qualquer sessão local para evitar simulações
+        localStorage.removeItem('zullya_auth');
+        localStorage.removeItem('zullya_access_token');
+        localStorage.removeItem('zullya_refresh_token');
+        setUser(null);
+        setModoDemo(false);
       }
 
       setLoading(false);
@@ -140,26 +131,9 @@ export function AuthProvider({ children }) {
 
   // ── Login Google ───────────────────────────────────────────
   const loginGoogle = async (credential) => {
-    // ── Modo Demo: backend offline → usar dados do Google localmente ──
+    // Se o backend estiver offline, proibir login via Google
     if (!backendOnline) {
-      const googleData = _decodeGoogleJwt(credential);
-      if (googleData) {
-        const demoUser = {
-          id: `google-${googleData.sub}`,
-          nome: googleData.name,
-          name: googleData.name,
-          email: googleData.email,
-          nivel_permissao: 'admin_demo',
-          role: 'admin_demo',
-          avatar: googleData.picture || null,
-        };
-        setUser(demoUser);
-        setEmpresa({ nome_empresa: 'Empresa Demo', status: 'trial' });
-        setModoDemo(true);
-        localStorage.setItem('zullya_auth', JSON.stringify(demoUser));
-        return { sucesso: true, demo: true };
-      }
-      return { sucesso: false, mensagem: 'Não foi possível ler os dados do Google. Tente o modo Demo.' };
+      return { sucesso: false, mensagem: 'O servidor da API está temporariamente offline. Não é possível fazer login com o Google no momento.' };
     }
 
     // ── Backend online → fluxo normal ──
@@ -218,11 +192,12 @@ export function AuthProvider({ children }) {
 
   // ── Login ──────────────────────────────────────────────────
   const login = async (email, password) => {
-    // Modo DEMO (backend offline ou credenciais demo)
-    if (!backendOnline || email === 'admin@demo.com') {
-      const demoUser = DEMO_USERS[0];
-      _setSession({ usuario: demoUser, empresa: demoUser.empresa }, true);
-      return { sucesso: true, demo: true };
+
+    if (!backendOnline) {
+      return { 
+        sucesso: false, 
+        mensagem: "O servidor está temporariamente offline. Não foi possível conectar à API de produção." 
+      };
     }
 
     try {

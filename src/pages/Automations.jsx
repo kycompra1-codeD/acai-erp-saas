@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Zap, Plus, Trash2, Play, Pause, Settings, 
   Bell, MessageSquare, Award, ArrowRight, ShieldAlert,
@@ -6,12 +6,40 @@ import {
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { automationService } from '../services/automationService';
+import { automacoesApi } from '../services/api';
 import toast from 'react-hot-toast';
 
+function mapFromApi(r) {
+  const acoes = Array.isArray(r.acoes) ? r.acoes : [];
+  const condicoes = Array.isArray(r.condicoes) ? r.condicoes : [];
+  const firstAction = acoes[0] ?? {};
+  return {
+    id: r.id,
+    name: r.nome,
+    trigger: r.gatilho,
+    action: firstAction.tipo ?? 'action:toast',
+    enabled: r.ativa,
+    metadata: firstAction.metadata ?? condicoes[0]?.metadata ?? { threshold: 10, message: '', phone: '', points: 10 },
+  };
+}
+
 export default function Automations() {
-  const { automationRules, addAutomationRule, updateAutomationRule, deleteAutomationRule, settings } = useApp();
+  const { settings } = useApp();
+  const [apiRules, setApiRules] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingRule, setEditingRule] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    automacoesApi.listar().then(res => {
+      if (mounted && res?.dados) setApiRules(res.dados.map(mapFromApi));
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  // Fallback to AppContext if API not available
+  const { automationRules: ctxRules = [], addAutomationRule, updateAutomationRule, deleteAutomationRule } = useApp();
+  const automationRules = apiRules ?? ctxRules;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,20 +70,55 @@ export default function Automations() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!formData.name) {
-      toast.error('Dê um nome para sua automação');
-      return;
-    }
+  const handleSave = async () => {
+    if (!formData.name) { toast.error('Dê um nome para sua automação'); return; }
+    const payload = {
+      nome: formData.name,
+      gatilho: formData.trigger,
+      ativa: formData.enabled,
+      acoes: [{ tipo: formData.action, metadata: formData.metadata }],
+      condicoes: [],
+    };
+    try {
+      if (apiRules !== null) {
+        if (editingRule) {
+          const res = await automacoesApi.editar(editingRule.id, payload);
+          if (res?.dados) setApiRules(prev => prev.map(r => r.id === editingRule.id ? mapFromApi(res.dados) : r));
+          toast.success('Automação atualizada!');
+        } else {
+          const res = await automacoesApi.criar(payload);
+          if (res?.dados) setApiRules(prev => [mapFromApi(res.dados), ...prev]);
+          toast.success('Nova automação criada!');
+        }
+      } else {
+        if (editingRule) { updateAutomationRule(editingRule.id, formData); toast.success('Automação atualizada!'); }
+        else { addAutomationRule(formData); toast.success('Nova automação criada!'); }
+      }
+      setShowModal(false);
+    } catch { toast.error('Erro ao salvar automação.'); }
+  };
 
-    if (editingRule) {
-      updateAutomationRule(editingRule.id, formData);
-      toast.success('Automação atualizada!');
+  const handleToggle = async (rule) => {
+    if (apiRules !== null) {
+      try {
+        const res = await automacoesApi.toggle(rule.id);
+        if (res?.dados) setApiRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: res.dados.ativa } : r));
+      } catch { toast.error('Erro ao alternar automação.'); }
     } else {
-      addAutomationRule(formData);
-      toast.success('Nova automação criada!');
+      updateAutomationRule(rule.id, { enabled: !rule.enabled });
     }
-    setShowModal(false);
+  };
+
+  const handleDelete = async (rule) => {
+    if (apiRules !== null) {
+      try {
+        await automacoesApi.remover(rule.id);
+        setApiRules(prev => prev.filter(r => r.id !== rule.id));
+        toast.success('Automação removida.');
+      } catch { toast.error('Erro ao remover automação.'); }
+    } else {
+      deleteAutomationRule(rule.id);
+    }
   };
 
   const getTriggerLabel = (id) => triggers.find(t => t.id === id)?.label || id;
@@ -146,9 +209,9 @@ export default function Automations() {
                 </div>
 
                 <div className="flex items-center gap-3 border-t md:border-t-0 pt-4 md:pt-0 border-white/5">
-                  <button 
+                  <button
                     className={`btn btn-icon ${rule.enabled ? 'text-warning' : 'text-success'}`}
-                    onClick={() => updateAutomationRule(rule.id, { enabled: !rule.enabled })}
+                    onClick={() => handleToggle(rule)}
                     title={rule.enabled ? 'Pausar' : 'Ativar'}
                   >
                     {rule.enabled ? <Pause size={20} /> : <Play size={20} />}
@@ -156,7 +219,7 @@ export default function Automations() {
                   <button className="btn btn-icon text-white/50 hover:text-white" onClick={() => handleOpenModal(rule)}>
                     <Settings size={20} />
                   </button>
-                  <button className="btn btn-icon text-danger/50 hover:text-danger" onClick={() => deleteAutomationRule(rule.id)}>
+                  <button className="btn btn-icon text-danger/50 hover:text-danger" onClick={() => handleDelete(rule)}>
                     <Trash2 size={20} />
                   </button>
                 </div>

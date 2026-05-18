@@ -27,21 +27,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
 
-    // Modo Demo se o backend estiver offline ou se for credencial demo
-    if (!backendOnline || email === 'admin@demo.com' || (email === 'admin@zullya.com.br' && senha === 'admin')) {
-      setTimeout(() => {
-        localStorage.setItem('zullya_admin_token', 'demo-admin-token');
-        localStorage.setItem('zullya_admin', JSON.stringify({
-          nome: 'Super Admin (Demo)',
-          email: email || 'admin@zullya.com.br',
-          role: 'master'
-        }));
-        setLoading(false);
-        toast.success('Entrando em Modo Demo...', { icon: '🚀' });
-        navigate('/admin');
-      }, 800);
-      return;
-    }
+
 
     try {
       const res = await fetch(`${API}/admin/auth/login`, {
@@ -63,34 +49,13 @@ export default function AdminLogin() {
       localStorage.setItem('zullya_admin', JSON.stringify(data.dados.admin));
       navigate('/admin');
     } catch {
-      toast.error('Erro ao conectar com o servidor. Acessando via Modo Demo.');
-      // Fallback automático para modo demo caso falhe a rede
-      localStorage.setItem('zullya_admin_token', 'demo-admin-token');
-      localStorage.setItem('zullya_admin', JSON.stringify({
-        nome: 'Super Admin (Demo)',
-        email: email || 'admin@zullya.com.br',
-        role: 'master'
-      }));
-      navigate('/admin');
+      toast.error('Erro ao conectar com o servidor. Verifique se o backend na VPS está ativo.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoAccess = () => {
-    setLoading(true);
-    setTimeout(() => {
-      localStorage.setItem('zullya_admin_token', 'demo-admin-token');
-      localStorage.setItem('zullya_admin', JSON.stringify({
-        nome: 'Super Admin (Demo)',
-        email: 'admin@zullya.com.br',
-        role: 'master'
-      }));
-      setLoading(false);
-      toast.success('Acesso Demo ativado!', { icon: '🎨' });
-      navigate('/admin');
-    }, 600);
-  };
+
 
   return (
     <div style={{
@@ -123,16 +88,16 @@ export default function AdminLogin() {
         {/* Alerta de Servidor Offline */}
         {!backendOnline && (
           <div style={{
-            background: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.2)',
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
             borderRadius: 12, padding: '12px 16px', marginBottom: 20,
             display: 'flex', alignItems: 'flex-start', gap: 10
           }}>
-            <AlertTriangle size={18} color="#f59e0b" style={{ flexShrink: 0, marginTop: 2 }} />
+            <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>Servidor da VPS Off-line</p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 2 }}>Servidor da VPS Off-line</p>
               <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4 }}>
-                O backend não pôde ser alcançado. O sistema entrará automaticamente no Modo Demo Simulado.
+                Não foi possível conectar com o servidor da API. Verifique sua conexão ou se a API na VPS está ativa.
               </p>
             </div>
           </div>
@@ -207,27 +172,7 @@ export default function AdminLogin() {
             )}
           </button>
 
-          {!backendOnline && (
-            <button
-              type="button"
-              onClick={handleDemoAccess}
-              disabled={loading}
-              style={{
-                marginTop: 4, padding: '10px 0',
-                background: 'rgba(124, 58, 237, 0.1)',
-                border: '1px solid rgba(124, 58, 237, 0.3)',
-                borderRadius: 8,
-                color: '#c4b5fd', fontSize: 13, fontWeight: 600,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.2s'
-              }}
-              className="hover-bg-primary"
-            >
-              <Play size={14} />
-              Acessar Modo Demo Direto
-            </button>
-          )}
+
         </form>
       </div>
       <style>{`

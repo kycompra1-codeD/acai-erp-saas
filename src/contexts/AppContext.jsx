@@ -15,11 +15,20 @@ import {
   mapFuncionario, mapFuncionarioToApi,
   mapFornecedor, mapFornecedorToApi,
   mapLancamento, mapLancamentoToApi,
+  mapCategoria, mapCategoriaToApi,
+  mapMovimentacaoEstoque,
   toPtStatus,
 } from '../services/apiAdapter';
 
 const AppContext = createContext(null);
 const STORAGE_KEY = 'zullya_system_data';
+
+const DEFAULT_CATEGORIES = [
+  { id: 'acai', label: 'Açaís', emoji: '🍇', image: null, parentId: null, order: 0 },
+  { id: 'complemento', label: 'Complementos', emoji: '🌾', image: null, parentId: null, order: 1 },
+  { id: 'bebida', label: 'Bebidas', emoji: '🥤', image: null, parentId: null, order: 2 },
+  { id: 'sobremesa', label: 'Sobremesas', emoji: '🍩', image: null, parentId: null, order: 3 },
+];
 
 function isAuthenticated() {
   return !!localStorage.getItem('zullya_access_token');
@@ -74,6 +83,17 @@ export function AppProvider({ children }) {
   // Quando autenticado, entidades partem vazias e são preenchidas pela API (sem mock/localStorage)
   const auth = isAuthenticated();
   const [allProducts, setAllProducts] = useState(() => auth ? [] : (stored?.products ?? freshData.initialProducts));
+  const [allCategories, setAllCategories] = useState(() => {
+    if (auth) return [];
+    let cats = stored?.categories;
+    if (!cats) {
+      try {
+        const legacy = localStorage.getItem('zullya_product_categories');
+        if (legacy) cats = JSON.parse(legacy);
+      } catch {}
+    }
+    return cats || DEFAULT_CATEGORIES;
+  });
   const [allCustomers, setAllCustomers] = useState(() => auth ? [] : (stored?.customers ?? freshData.initialCustomers));
   const [allInventory, setAllInventory] = useState(() => auth ? [] : (stored?.inventory ?? freshData.initialInventory));
   const [allOrders, setAllOrders] = useState(() => auth ? [] : (stored?.orders ?? freshData.initialOrders));
@@ -105,7 +125,7 @@ export function AppProvider({ children }) {
     async function loadAll() {
       setApiLoading(true);
       try {
-        const [prods, clients, peds, stock, funcs, forn, fin] = await Promise.allSettled([
+        const [prods, clients, peds, stock, funcs, forn, fin, cats] = await Promise.allSettled([
           produtosApi.listar(),
           clientesApi.listar(),
           pedidosApi.listar({ limit: 200 }),
@@ -113,6 +133,7 @@ export function AppProvider({ children }) {
           funcionariosApi.listar(),
           fornecedoresApi.listar(),
           financeiroApi.listar({ limit: 500 }),
+          produtosApi.categorias.listar(),
         ]);
 
         if (prods.status === 'fulfilled' && prods.value?.dados) {
@@ -135,6 +156,9 @@ export function AppProvider({ children }) {
         }
         if (fin.status === 'fulfilled' && fin.value?.dados) {
           setAllFinanceEntries(fin.value.dados.map(l => mapLancamento(l, compId)));
+        }
+        if (cats.status === 'fulfilled' && cats.value?.dados) {
+          setAllCategories(cats.value.dados.map(c => mapCategoria(c, compId)));
         }
 
         setApiSynced(true);
@@ -175,6 +199,7 @@ export function AppProvider({ children }) {
   const employees = allEmployees.filter(e => e.companyId === activeCompanyId);
   const suppliers = allSuppliers.filter(s => s.companyId === activeCompanyId);
   const financeEntries = allFinanceEntries.filter(f => f.companyId === activeCompanyId);
+  const categoriesList = allCategories.filter(c => c.companyId === activeCompanyId);
   const conciliations = allConciliations.filter(c => c.companyId === activeCompanyId);
   const proposals = allProposals.filter(p => p.companyId === activeCompanyId);
   const automationRules = allAutomationRules.filter(r => r.companyId === activeCompanyId);
@@ -213,8 +238,9 @@ export function AppProvider({ children }) {
       orderCounter, employees: allEmployees, suppliers: allSuppliers,
       financeEntries: allFinanceEntries, conciliations: allConciliations,
       proposals: allProposals, activeExtensions, automationRules: allAutomationRules, allCashiers,
+      categories: allCategories,
     });
-  }, [companies, activeCompanyId, allProducts, allCustomers, allInventory, allOrders, allSettings, orderCounter, allEmployees, allSuppliers, allFinanceEntries, allConciliations, allProposals, activeExtensions, allAutomationRules, allCashiers]);
+  }, [companies, activeCompanyId, allProducts, allCustomers, allInventory, allOrders, allSettings, orderCounter, allEmployees, allSuppliers, allFinanceEntries, allConciliations, allProposals, activeExtensions, allAutomationRules, allCashiers, allCategories]);
 
   useEffect(() => {
     automationService.init(automationRules, { inventory, customers, orders, settings });
@@ -446,6 +472,112 @@ export function AppProvider({ children }) {
     setAllInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: i.quantity + qty, lastUpdate: new Date().toISOString() } : i));
   }, []);
 
+  // ── CATEGORIAS ────────────────────────────────────────────
+  const addCategory = useCallback(async (parentId = null, categoryForm) => {
+    const label = categoryForm.label?.trim();
+    if (!label) throw new Error('Nome obrigatório');
+    
+    if (isAuthenticated()) {
+      const apiPayload = mapCategoriaToApi({ label, emoji: categoryForm.emoji, image: categoryForm.image, parentId });
+      const res = await produtosApi.categorias.criar(apiPayload);
+      if (!res?.dados) throw new Error('Falha ao criar categoria');
+      const mapped = mapCategoria(res.dados, activeCompanyId);
+      setAllCategories(prev => [...prev, mapped]);
+      return mapped;
+    }
+    
+    const siblings = allCategories.filter(c => c.parentId === parentId && c.companyId === activeCompanyId);
+    const order = siblings.length > 0 ? Math.max(...siblings.map(s => s.order)) + 1 : 0;
+    const newCat = {
+      id: `cat_${Date.now()}`,
+      companyId: activeCompanyId,
+      label,
+      emoji: categoryForm.emoji || '🏷️',
+      image: categoryForm.image || null,
+      parentId,
+      order
+    };
+    setAllCategories(prev => [...prev, newCat]);
+    return newCat;
+  }, [activeCompanyId, allCategories]);
+
+  const updateCategory = useCallback(async (id, updates) => {
+    if (isAuthenticated()) {
+      await produtosApi.categorias.editar(id, mapCategoriaToApi(updates));
+    }
+    setAllCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  }, []);
+
+  const deleteCategory = useCallback(async (id) => {
+    if (isAuthenticated()) {
+      await produtosApi.categorias.desativar(id);
+    }
+    const idsToDelete = new Set([id]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const c of allCategories) {
+        if (idsToDelete.has(c.parentId) && !idsToDelete.has(c.id)) {
+          idsToDelete.add(c.id);
+          added = true;
+        }
+      }
+    }
+    setAllCategories(prev => prev.filter(c => !idsToDelete.has(c.id)));
+  }, [allCategories]);
+
+  const saveCats = useCallback(async (newList) => {
+    if (isAuthenticated()) {
+      const promises = newList.map(c => {
+        const apiPayload = mapCategoriaToApi(c);
+        return produtosApi.categorias.editar(c.id, apiPayload).catch(() => null);
+      });
+      await Promise.allSettled(promises);
+    }
+    setAllCategories(prev => {
+      const rest = prev.filter(c => c.companyId !== activeCompanyId);
+      return [...rest, ...newList.map(c => ({ ...c, companyId: activeCompanyId }))];
+    });
+  }, [activeCompanyId]);
+
+  // ── AUDITORIA / MOVIMENTAÇÕES DE ESTOQUE ──────────────────
+  const loadItemMovements = useCallback(async (itemId) => {
+    if (isAuthenticated()) {
+      const res = await estoqueApi.movimentacoes(itemId);
+      if (res?.dados && Array.isArray(res.dados)) {
+        return res.dados.map(mapMovimentacaoEstoque);
+      }
+      return [];
+    }
+    const item = allInventory.find(i => i.id === itemId);
+    return item?.movements || [];
+  }, [allInventory]);
+
+  const adjustInventoryStock = useCallback(async (id, adjData) => {
+    if (isAuthenticated()) {
+      await estoqueApi.registrarMovimentacao(id, {
+        tipo: adjData.type,
+        quantidade: adjData.qty,
+        motivo: adjData.reason || 'Ajuste de Estoque',
+        observacoes: adjData.note || '',
+      });
+      await estoqueApi.editar(id, { quantidade_atual: adjData.newQty });
+    }
+    setAllInventory(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      const movement = {
+        id: `mov-${Date.now()}`,
+        date: new Date().toISOString(),
+        type: adjData.type,
+        qty: adjData.type === 'saida' ? -adjData.qty : adjData.qty,
+        reason: adjData.reason || 'Ajuste de Estoque',
+        note: adjData.note || '',
+      };
+      const movements = [movement, ...(i.movements || [])].slice(0, 50);
+      return { ...i, quantity: adjData.newQty, movements, lastUpdate: new Date().toISOString() };
+    }));
+  }, []);
+
   // ── SETTINGS ──────────────────────────────────────────────
   const updateSettings = useCallback((updates) => {
     setAllSettings(prev => ({ ...prev, [activeCompanyId]: { ...(prev[activeCompanyId] || {}), ...updates } }));
@@ -623,16 +755,19 @@ export function AppProvider({ children }) {
     companies, activeCompanyId, activeCompany,
     products, customers, inventory, orders, settings,
     employees, suppliers, financeEntries,
+    categoriesList,
     // company
     switchCompany, addCompany, updateCompany,
     // produtos
     addProduct, updateProduct, deleteProduct,
+    // categorias
+    addCategory, updateCategory, deleteCategory, saveCats,
     // pedidos
     addOrder, updateOrderStatus, updateOrder, deductInventoryOnSale,
     // clientes
     addCustomer, updateCustomer, deleteCustomer,
     // estoque
-    updateInventoryItem, addInventoryItem, addInventoryStock,
+    updateInventoryItem, addInventoryItem, addInventoryStock, loadItemMovements, adjustInventoryStock,
     // settings
     updateSettings,
     // funcionários

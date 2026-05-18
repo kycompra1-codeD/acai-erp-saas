@@ -276,3 +276,39 @@ export function mapLancamentoToApi(l) {
     metodo_pagamento: l.paymentMethod || null,
   };
 }
+
+// ── Categorias ────────────────────────────────────────────
+export function mapCategoria(c, companyId) {
+  return {
+    id: c.id,
+    companyId,
+    label: c.nome,
+    emoji: c.emoji || '🏷️',
+    image: c.imagem_url || null,
+    parentId: c.parent_id || null,
+    order: parseInt(c.ordem ?? 0),
+  };
+}
+
+export function mapCategoriaToApi(c) {
+  return {
+    nome: c.label,
+    emoji: c.emoji || '🏷️',
+    imagem_url: c.image || null,
+    parent_id: c.parentId || null,
+    ordem: c.order || 0,
+  };
+}
+
+// ── Movimentações de Estoque ──────────────────────────────
+export function mapMovimentacaoEstoque(m) {
+  return {
+    id: m.id,
+    date: m.criado_em || m.data || new Date().toISOString(),
+    type: m.tipo || 'entrada',
+    qty: parseFloat(m.quantidade ?? 0),
+    reason: m.motivo || '',
+    note: m.observacoes || '',
+  };
+}
+

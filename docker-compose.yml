@@ -6,6 +6,8 @@
 # SSL automático via Traefik + Let's Encrypt
 # ============================================================
 
+name: zullya-erp
+
 networks:
   zullya-net:
     driver: bridge

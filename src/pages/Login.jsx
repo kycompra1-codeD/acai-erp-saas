@@ -139,14 +139,14 @@ export default function Login() {
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '6px 10px',
           borderRadius: 'var(--radius)',
-          background: backendOnline ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-          border: `1px solid ${backendOnline ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          background: backendOnline ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+          border: `1px solid ${backendOnline ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
           marginBottom: 24, fontSize: 11,
-          color: backendOnline ? '#10b981' : '#f59e0b',
+          color: backendOnline ? '#10b981' : '#ef4444',
         }}>
           {backendOnline
             ? <><Wifi size={12} /> API Online — login real ativado</>
-            : <><WifiOff size={12} /> API Offline — use o modo Demo</>
+            : <><WifiOff size={12} /> Servidor Offline — login temporariamente indisponível</>
           }
         </div>
 
