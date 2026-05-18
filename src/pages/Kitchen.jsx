@@ -258,26 +258,27 @@ export default function Kitchen() {
     return unsub;
   }, []);
 
-  const handleAdvance = useCallback((id, newStatus) => {
-    updateOrderStatus(id, newStatus);
-    const labels = { preparing: 'em preparo', ready: 'pronto', delivered: 'entregue' };
-    toast.success(`Pedido marcado como ${labels[newStatus] || newStatus}!`);
+  const handleAdvance = useCallback(async (id, newStatus) => {
+    try {
+      await updateOrderStatus(id, newStatus);
+      const labels = { preparing: 'em preparo', ready: 'pronto', delivered: 'entregue' };
+      toast.success(`Pedido marcado como ${labels[newStatus] || newStatus}!`);
 
-    if (newStatus === 'ready') {
-      // Toca um alerta sonoro via AudioContext
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.4);
-      } catch { /* sem som — ok */ }
-    }
+      if (newStatus === 'ready') {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.4);
+        } catch { /* sem som — ok */ }
+      }
+    } catch { toast.error('Erro ao atualizar status.'); }
   }, [updateOrderStatus]);
 
   return (

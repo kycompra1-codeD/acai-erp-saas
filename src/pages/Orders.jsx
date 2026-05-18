@@ -95,33 +95,41 @@ export default function Orders() {
     });
   }, [orders, filter, search]);
 
-  const handleAdvance = (order) => {
+  const handleAdvance = async (order) => {
     const next = NEXT_STATUS[order.status];
     if (!next) return;
-    updateOrderStatus(order.id, next);
-    toast.success(`Pedido #${order.number} → ${STATUS_LABEL[next]}`);
+    try {
+      await updateOrderStatus(order.id, next);
+      toast.success(`Pedido #${order.number} → ${STATUS_LABEL[next]}`);
+    } catch { toast.error('Erro ao atualizar status.'); }
   };
 
-  const handleUndo = (order) => {
+  const handleUndo = async (order) => {
     const prev = PREV_STATUS[order.status];
     if (!prev) return;
-    updateOrderStatus(order.id, prev);
-    if (prev === 'pending') updateOrder(order.id, { preparingAt: null });
-    if (prev === 'preparing') updateOrder(order.id, { readyAt: null });
-    if (prev === 'ready') updateOrder(order.id, { deliveredAt: null });
-    toast.success(`Revertido para ${STATUS_LABEL[prev]}`);
+    try {
+      await updateOrderStatus(order.id, prev);
+      if (prev === 'pending') updateOrder(order.id, { preparingAt: null });
+      if (prev === 'preparing') updateOrder(order.id, { readyAt: null });
+      if (prev === 'ready') updateOrder(order.id, { deliveredAt: null });
+      toast.success(`Revertido para ${STATUS_LABEL[prev]}`);
+    } catch { toast.error('Erro ao reverter status.'); }
   };
 
-  const handleCancel = () => {
-    updateOrderStatus(cancelTarget.id, 'cancelled');
-    toast.success(`Pedido #${cancelTarget.number} cancelado`);
-    setCancelTarget(null);
+  const handleCancel = async () => {
+    try {
+      await updateOrderStatus(cancelTarget.id, 'cancelled');
+      toast.success(`Pedido #${cancelTarget.number} cancelado`);
+      setCancelTarget(null);
+    } catch { toast.error('Erro ao cancelar pedido.'); }
   };
 
-  const handleRevert = (order) => {
-    updateOrderStatus(order.id, 'pending');
-    updateOrder(order.id, { deliveredAt: null, cancelledAt: null });
-    toast.success(`Pedido #${order.number} revertido`);
+  const handleRevert = async (order) => {
+    try {
+      await updateOrderStatus(order.id, 'pending');
+      updateOrder(order.id, { deliveredAt: null, cancelledAt: null });
+      toast.success(`Pedido #${order.number} revertido`);
+    } catch { toast.error('Erro ao reativar pedido.'); }
   };
 
   const counts = useMemo(() => {

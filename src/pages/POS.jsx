@@ -622,7 +622,7 @@ export default function POS() {
     setCurrentPaymentAmount('');
   }, []);
 
-  const performFinalize = useCallback(() => {
+  const performFinalize = useCallback(async () => {
     const customer = customers.find(c => c.id === customerId);
     const orderData = {
       customerId: customerId || null,
@@ -635,15 +635,18 @@ export default function POS() {
       troco: troco || undefined,
     };
 
-    const order = addOrder(orderData);
-    setSuccess(order);
-    setShowPayModal(false);
-    setProcessingPayment(false);
-    clearCart();
-    toast.success(`Pedido #${order.number} registrado! 🎉`);
-
-    // Impressão automática do cupom
-    setTimeout(() => printService.printOrder({ ...order, troco }), 500);
+    try {
+      const order = await addOrder(orderData);
+      setSuccess(order);
+      setShowPayModal(false);
+      setProcessingPayment(false);
+      clearCart();
+      toast.success(`Pedido #${order.number} registrado! 🎉`);
+      setTimeout(() => printService.printOrder({ ...order, troco }), 500);
+    } catch {
+      setProcessingPayment(false);
+      toast.error('Erro ao registrar pedido. Tente novamente.');
+    }
   }, [cart, customers, customerId, total, orderType, payments, notes, troco, addOrder, clearCart]);
 
   const addPaymentMethod = useCallback(() => {

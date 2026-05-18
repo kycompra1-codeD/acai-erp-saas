@@ -406,11 +406,13 @@ export default function Sales() {
                         <span className="font-black text-success">
                           R$ {prop.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
-                        <button 
-                          onClick={() => {
-                            convertProposalToOrder(prop.id);
-                            toast.success('Pedido criado na Central de Vendas!');
-                            setIsProposalsOpen(false);
+                        <button
+                          onClick={async () => {
+                            try {
+                              await convertProposalToOrder(prop.id);
+                              toast.success('Pedido criado na Central de Vendas!');
+                              setIsProposalsOpen(false);
+                            } catch { toast.error('Erro ao criar pedido.'); }
                           }}
                           className="btn btn-sm btn-primary"
                         >

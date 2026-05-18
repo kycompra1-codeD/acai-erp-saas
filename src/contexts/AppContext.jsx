@@ -554,10 +554,10 @@ export function AppProvider({ children }) {
     setAllProposals(prev => prev.map(p => p.id === id ? { ...p, status } : p));
   }, []);
 
-  const convertProposalToOrder = useCallback((proposalId) => {
+  const convertProposalToOrder = useCallback(async (proposalId) => {
     const proposal = allProposals.find(p => p.id === proposalId);
     if (!proposal) return null;
-    const newOrder = addOrder({ customerId: proposal.customerId, customerName: proposal.customerName, items: proposal.items, total: proposal.total, type: 'balcão', payment: 'pendente', notes: `Orçamento #${proposal.number}. ${proposal.notes || ''}` });
+    const newOrder = await addOrder({ customerId: proposal.customerId, customerName: proposal.customerName, items: proposal.items, total: proposal.total, type: 'balcão', payment: 'pendente', notes: `Orçamento #${proposal.number}. ${proposal.notes || ''}` });
     updateProposalStatus(proposalId, 'approved');
     return newOrder;
   }, [allProposals, addOrder, updateProposalStatus]);
