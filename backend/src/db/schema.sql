@@ -203,7 +203,7 @@ INSERT INTO planos (nome, valor_mensal, valor_anual, max_usuarios, max_filiais, 
     3,
     1,
     500,
-    '["vendas","estoque","clientes","relatorios_basicos"]'
+    '["vendas","estoque","clientes","financeiro","compras"]'
 ),
 (
     'Pro',
@@ -212,7 +212,7 @@ INSERT INTO planos (nome, valor_mensal, valor_anual, max_usuarios, max_filiais, 
     10,
     3,
     5000,
-    '["vendas","estoque","clientes","financeiro","crm","nfe","relatorios","metas"]'
+    '["vendas","estoque","clientes","financeiro","crm","nfe","relatorios","metas","compras","logistica","funcionarios","fidelidade"]'
 ),
 (
     'Enterprise',
@@ -221,6 +221,6 @@ INSERT INTO planos (nome, valor_mensal, valor_anual, max_usuarios, max_filiais, 
     999,
     999,
     999999,
-    '["vendas","estoque","clientes","financeiro","crm","nfe","relatorios","metas","multi_filial","api_acesso","suporte_prioritario"]'
+    '["vendas","estoque","clientes","financeiro","crm","nfe","relatorios","metas","multi_filial","api_acesso","suporte_prioritario","automacoes","logistica","compras","funcionarios","fidelidade"]'
 )
 ON CONFLICT DO NOTHING;

@@ -34,6 +34,7 @@ import ResetSenha from './pages/ResetSenha';
 import AdminLogin from './pages/AdminLogin';
 import AdminPanel from './pages/AdminPanel';
 import { Toaster } from 'react-hot-toast';
+import { ModuloLocked } from './components/ModuloLocked';
 
 function App() {
   return (
@@ -128,17 +129,17 @@ function App() {
                   </Layout>
                 }
               />
-              <Route path="/loyalty" element={<Layout><Loyalty /></Layout>} />
-              <Route path="/crm" element={<Layout><CRM /></Layout>} />
-              <Route path="/logistics" element={<Layout><Logistics /></Layout>} />
-              <Route path="/integrations" element={<Layout><Integrations /></Layout>} />
-              <Route path="/bi" element={<Layout><BI /></Layout>} />
-              <Route path="/finance" element={<Layout><Finance /></Layout>} />
-              <Route path="/employees" element={<Layout><Employees /></Layout>} />
+              <Route path="/loyalty" element={<Layout><ModuloLocked modulo="fidelidade"><Loyalty /></ModuloLocked></Layout>} />
+              <Route path="/crm" element={<Layout><ModuloLocked modulo="crm"><CRM /></ModuloLocked></Layout>} />
+              <Route path="/logistics" element={<Layout><ModuloLocked modulo="logistica"><Logistics /></ModuloLocked></Layout>} />
+              <Route path="/integrations" element={<Layout><ModuloLocked modulo="api_acesso"><Integrations /></ModuloLocked></Layout>} />
+              <Route path="/bi" element={<Layout><ModuloLocked modulo="relatorios"><BI /></ModuloLocked></Layout>} />
+              <Route path="/finance" element={<Layout><ModuloLocked modulo="financeiro"><Finance /></ModuloLocked></Layout>} />
+              <Route path="/employees" element={<Layout><ModuloLocked modulo="funcionarios"><Employees /></ModuloLocked></Layout>} />
               <Route path="/kitchen" element={<Layout><Kitchen /></Layout>} />
-              <Route path="/purchases" element={<Layout><Purchases /></Layout>} />
-              <Route path="/automations" element={<Layout><Automations /></Layout>} />
-              <Route path="/fiscal" element={<Layout><Fiscal /></Layout>} />
+              <Route path="/purchases" element={<Layout><ModuloLocked modulo="compras"><Purchases /></ModuloLocked></Layout>} />
+              <Route path="/automations" element={<Layout><ModuloLocked modulo="automacoes"><Automations /></ModuloLocked></Layout>} />
+              <Route path="/fiscal" element={<Layout><ModuloLocked modulo="nfe"><Fiscal /></ModuloLocked></Layout>} />
               <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
               <Route path="/permissions" element={<Layout><Permissions /></Layout>} />
               <Route path="/settings" element={<Layout><Settings /></Layout>} />
