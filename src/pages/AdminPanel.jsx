@@ -4,9 +4,10 @@ import {
   Users, TrendingUp, AlertCircle, CheckCircle, Clock,
   LogOut, Search, RefreshCw, ChevronDown, X, Save,
   Gift, Ban, Edit3, BarChart2, Package, Plus, Trash2,
-  Check, Star, ToggleLeft, ToggleRight,
+  Check, Star, ToggleLeft, ToggleRight, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { checkBackend } from '../services/api';
 
 const API = import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api';
 
@@ -20,6 +21,12 @@ function adminFetch(path, options = {}) {
       ...options.headers,
     },
   }).then(async r => {
+    // Caso o servidor retorne um erro HTML (como Bad Gateway 502)
+    const contentType = r.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Servidor indisponível (Resposta não-JSON)');
+    }
+
     const data = await r.json();
     if (r.status === 401) {
       localStorage.removeItem('zullya_admin_token');
@@ -55,6 +62,135 @@ const MODULOS_LISTA = [
   { id: 'compras',            label: 'Compras / Fornecedores' },
   { id: 'funcionarios',       label: 'RH / Funcionários' },
   { id: 'fidelidade',         label: 'Programa de Fidelidade' },
+];
+
+// Dados Simulados Premium para o Modo Demo
+const INITIAL_STATS = {
+  mrr: 14850.00,
+  total_ativos: 124,
+  em_trial: 32,
+  churned: 5
+};
+
+const INITIAL_PLANOS = [
+  {
+    id: 'p-1',
+    nome: 'Starter',
+    descricao: 'Para começar a organizar suas vendas e financeiro',
+    valor_mensal: 59.00,
+    valor_anual: 566.00,
+    trial_dias: 14,
+    max_usuarios: 1,
+    max_filiais: 1,
+    max_produtos: 500,
+    modulos: ['vendas', 'estoque', 'clientes', 'financeiro'],
+    ativo: true,
+    destaque: false,
+    total_tenants_ativos: 12
+  },
+  {
+    id: 'p-2',
+    nome: 'Business PRO',
+    descricao: 'O ERP completo para sua loja crescer com notas fiscais',
+    valor_mensal: 119.00,
+    valor_anual: 1142.00,
+    trial_dias: 14,
+    max_usuarios: 5,
+    max_filiais: 2,
+    max_produtos: 2000,
+    modulos: ['vendas', 'estoque', 'clientes', 'financeiro', 'crm', 'nfe', 'relatorios', 'funcionarios', 'automacoes', 'compras'],
+    ativo: true,
+    destaque: true,
+    total_tenants_ativos: 84
+  },
+  {
+    id: 'p-3',
+    nome: 'Enterprise',
+    descricao: 'Infraestrutura robusta dedicada com suporte VIP',
+    valor_mensal: 249.00,
+    valor_anual: 2390.00,
+    trial_dias: 14,
+    max_usuarios: 99,
+    max_filiais: 5,
+    max_produtos: 10000,
+    modulos: ['vendas', 'estoque', 'clientes', 'financeiro', 'crm', 'nfe', 'relatorios', 'funcionarios', 'automacoes', 'compras', 'multi_filial', 'api_acesso', 'suporte_prioritario', 'logistica', 'fidelidade'],
+    ativo: true,
+    destaque: false,
+    total_tenants_ativos: 28
+  }
+];
+
+const INITIAL_TENANTS = [
+  {
+    id: 't-1',
+    nome_empresa: 'Zullya Sistemas Ltda',
+    email_contato: 'contato@zullya.com.br',
+    plano_nome: 'Enterprise',
+    plano_id: 'p-3',
+    status: 'ativo',
+    total_usuarios: 10,
+    desconto_percentual: 0,
+    acesso_gratuito: true,
+    criado_em: '2026-04-01T10:00:00Z',
+    trial_expira_em: null,
+    notas_internas: 'Nosso próprio inquilino administrativo.'
+  },
+  {
+    id: 't-2',
+    nome_empresa: 'Açaí do Monstro',
+    email_contato: 'monstro@acai.com',
+    plano_nome: 'Business PRO',
+    plano_id: 'p-2',
+    status: 'ativo',
+    total_usuarios: 4,
+    desconto_percentual: 10,
+    acesso_gratuito: false,
+    criado_em: '2026-05-10T14:30:00Z',
+    trial_expira_em: null,
+    notas_internas: 'Cliente antigo. Solicita suporte aos fins de semana.'
+  },
+  {
+    id: 't-3',
+    nome_empresa: 'Moda & Estilo Store',
+    email_contato: 'contato@modaestilo.com',
+    plano_nome: 'Starter',
+    plano_id: 'p-1',
+    status: 'trial',
+    total_usuarios: 2,
+    desconto_percentual: 0,
+    acesso_gratuito: false,
+    criado_em: '2026-05-15T09:00:00Z',
+    trial_expira_em: '2026-05-29T09:00:00Z',
+    notas_internas: 'Interessado em migrar para o PRO após o trial.'
+  },
+  {
+    id: 't-4',
+    nome_empresa: 'Padaria Pão de Ouro',
+    email_contato: 'gerencia@paodeouro.com.br',
+    plano_nome: 'Business PRO',
+    plano_id: 'p-2',
+    status: 'inadimplente',
+    total_usuarios: 5,
+    desconto_percentual: 0,
+    acesso_gratuito: false,
+    criado_em: '2026-03-20T11:15:00Z',
+    trial_expira_em: null,
+    notas_internas: 'Fatura de Maio pendente de pagamento.'
+  },
+  {
+    id: 't-5',
+    nome_empresa: 'Restaurante Central',
+    email_contato: 'financeiro@centralrest.com',
+    plano_nome: 'Enterprise',
+    plano_id: 'p-3',
+    status: 'suspenso',
+    total_usuarios: 12,
+    desconto_percentual: 20,
+    acesso_gratuito: false,
+    criado_em: '2026-02-10T08:00:00Z',
+    trial_expira_em: null,
+    notas_internas: 'Bloqueado por falta de pagamento recorrente.'
+  }
 ];
 
 function StatusBadge({ status }) {
@@ -93,7 +229,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 }
 
 // ── Modal de edição de cliente ───────────────────────────────
-function ClienteModal({ tenant, planos, onClose, onSave }) {
+function ClienteModal({ tenant, planos, onClose, onSave, modoDemo }) {
   const [status, setStatus] = useState(tenant.status);
   const [planoId, setPlanoId] = useState(tenant.plano_id || '');
   const [desconto, setDesconto] = useState(tenant.desconto_percentual || 0);
@@ -104,6 +240,28 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
 
   const save = async () => {
     setSaving(true);
+    
+    // Modo Demo: Alterações salvas localmente
+    if (modoDemo) {
+      setTimeout(() => {
+        const planoEscolhido = planos.find(p => p.id === planoId);
+        const atualizado = {
+          ...tenant,
+          status,
+          plano_id: planoId,
+          plano_name: planoEscolhido ? planoEscolhido.nome : 'Sem plano',
+          desconto_percentual: parseFloat(desconto),
+          acesso_gratuito: gratuito,
+          notas_internas: notas
+        };
+        onSave(atualizado);
+        toast.success('Cliente atualizado no Modo Demo!');
+        setSaving(false);
+        onClose();
+      }, 500);
+      return;
+    }
+
     try {
       await Promise.all([
         adminFetch(`/tenants/${tenant.id}/status`, { method: 'PATCH', body: JSON.stringify({ status, motivo }) }),
@@ -207,7 +365,7 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
 }
 
 // ── Modal de criação/edição de plano ─────────────────────────
-function PlanoModal({ plano, onClose, onSave }) {
+function PlanoModal({ plano, onClose, onSave, modoDemo }) {
   const isNovo = !plano?.id;
   const [form, setForm] = useState({
     nome:         plano?.nome         ?? '',
@@ -239,16 +397,32 @@ function PlanoModal({ plano, onClose, onSave }) {
       return;
     }
     setSaving(true);
+
+    const body = {
+      ...form,
+      valor_mensal: parseFloat(form.valor_mensal),
+      valor_anual: form.valor_anual ? parseFloat(form.valor_anual) : null,
+      trial_dias: parseInt(form.trial_dias),
+      max_usuarios: parseInt(form.max_usuarios),
+      max_filiais: parseInt(form.max_filiais),
+      max_produtos: parseInt(form.max_produtos),
+    };
+
+    if (modoDemo) {
+      setTimeout(() => {
+        const item = isNovo 
+          ? { ...body, id: `p-${Date.now()}`, total_tenants_ativos: 0 }
+          : { ...body, id: plano.id, total_tenants_ativos: plano.total_tenants_ativos };
+        
+        onSave(item);
+        toast.success(isNovo ? 'Plano criado no Modo Demo!' : 'Plano atualizado no Modo Demo!');
+        setSaving(false);
+        onClose();
+      }, 500);
+      return;
+    }
+
     try {
-      const body = {
-        ...form,
-        valor_mensal: parseFloat(form.valor_mensal),
-        valor_anual: form.valor_anual ? parseFloat(form.valor_anual) : null,
-        trial_dias: parseInt(form.trial_dias),
-        max_usuarios: parseInt(form.max_usuarios),
-        max_filiais: parseInt(form.max_filiais),
-        max_produtos: parseInt(form.max_produtos),
-      };
       const res = isNovo
         ? await adminFetch('/planos', { method: 'POST', body: JSON.stringify(body) })
         : await adminFetch(`/planos/${plano.id}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -260,6 +434,8 @@ function PlanoModal({ plano, onClose, onSave }) {
       } else {
         toast.error(res.mensagem || 'Erro ao salvar');
       }
+    } catch {
+      toast.error('Erro ao conectar ao salvar plano');
     } finally {
       setSaving(false);
     }
@@ -383,36 +559,11 @@ function PlanoModal({ plano, onClose, onSave }) {
 }
 
 // ── Aba de Planos ────────────────────────────────────────────
-function PlanosTab() {
-  const [planos, setPlanos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalPlano, setModalPlano] = useState(null); // null = fechado, {} = novo, objeto = editar
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
-  const carregar = useCallback(async () => {
-    setLoading(true);
-    const data = await adminFetch('/planos');
-    if (data.sucesso) setPlanos(data.dados);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { carregar(); }, [carregar]);
-
-  const desativar = async (plano) => {
-    const res = await adminFetch(`/planos/${plano.id}`, { method: 'DELETE' });
-    if (res.sucesso) {
-      toast.success(`Plano "${plano.nome}" desativado.`);
-      carregar();
-    } else {
-      toast.error(res.mensagem || 'Erro ao desativar');
-    }
-    setConfirmDelete(null);
-  };
-
+function PlanosTab({ planos, loading, setModalPlano, setConfirmDelete, modoDemo }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <p style={{ color: '#9ca3af', fontSize: 13 }}>{planos.length} plano(s) cadastrado(s)</p>
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>{planos.length} plano(s) cadastrado(s) {modoDemo && '(Modo Demo)'}</p>
         <button
           onClick={() => setModalPlano({})}
           style={{
@@ -528,35 +679,6 @@ function PlanosTab() {
           })}
         </div>
       )}
-
-      {/* Modal criar/editar plano */}
-      {modalPlano !== null && (
-        <PlanoModal
-          plano={Object.keys(modalPlano).length === 0 ? null : modalPlano}
-          onClose={() => setModalPlano(null)}
-          onSave={carregar}
-        />
-      )}
-
-      {/* Confirm desativar */}
-      {confirmDelete && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 12, padding: 32, maxWidth: 420, width: '100%' }}>
-            <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Desativar plano "{confirmDelete.nome}"?</p>
-            <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 24 }}>
-              O plano ficará invisível para novos clientes. Clientes existentes não serão afetados.
-            </p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => desativar(confirmDelete)} style={{ flex: 1, padding: '10px 0', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontWeight: 700 }}>
-                Desativar
-              </button>
-              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: '10px 0', background: '#2d2d35', border: 'none', borderRadius: 8, color: '#e5e7eb', cursor: 'pointer', fontWeight: 700 }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -574,48 +696,170 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const admin = JSON.parse(localStorage.getItem('zullya_admin') || '{}');
 
-  const [stats, setStats] = useState(null);
-  const [tenants, setTenants] = useState([]);
-  const [planos, setPlanos] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState(INITIAL_STATS);
+  const [tenants, setTenants] = useState(INITIAL_TENANTS);
+  const [planos, setPlanos] = useState(INITIAL_PLANOS);
+  const [total, setTotal] = useState(INITIAL_TENANTS.length);
+  
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [modalPlano, setModalPlano] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [aba, setAba] = useState('clientes');
+  const [modoDemo, setModoDemo] = useState(false);
 
-  const carregarStats = useCallback(async () => {
-    const data = await adminFetch('/stats');
-    if (data.sucesso) setStats(data.dados);
+  // Carregar dados de forma segura (resiliente)
+  const carregarStats = useCallback(async (isDemo) => {
+    if (isDemo) return;
+    try {
+      const data = await adminFetch('/stats');
+      if (data.sucesso) setStats(data.dados);
+    } catch {
+      console.warn('Erro ao carregar estatísticas reais do servidor. Mantendo dados simulados.');
+    }
   }, []);
 
-  const carregarTenants = useCallback(async () => {
+  const carregarTenants = useCallback(async (isDemo) => {
+    if (isDemo) {
+      setLoading(true);
+      // Simular busca/filtro local no Modo Demo
+      let filtrados = [...INITIAL_TENANTS];
+      if (busca) {
+        filtrados = filtrados.filter(t => 
+          t.nome_empresa.toLowerCase().includes(busca.toLowerCase()) || 
+          t.email_contato.toLowerCase().includes(busca.toLowerCase())
+        );
+      }
+      if (filtroStatus) {
+        filtrados = filtrados.filter(t => t.status === filtroStatus);
+      }
+      setTenants(filtrados);
+      setTotal(filtrados.length);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    const params = new URLSearchParams();
-    if (busca) params.set('busca', busca);
-    if (filtroStatus) params.set('status', filtroStatus);
-    const data = await adminFetch(`/tenants?${params}`);
-    if (data.sucesso) { setTenants(data.dados); setTotal(data.total); }
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (busca) params.set('busca', busca);
+      if (filtroStatus) params.set('status', filtroStatus);
+      const data = await adminFetch(`/tenants?${params}`);
+      if (data.sucesso) { 
+        setTenants(data.dados); 
+        setTotal(data.total); 
+      }
+    } catch (err) {
+      console.warn('Erro ao conectar ao carregar inquilinos reais. Usando simulados.', err);
+    } finally {
+      setLoading(false);
+    }
   }, [busca, filtroStatus]);
 
-  const carregarPlanos = useCallback(async () => {
-    const data = await adminFetch('/planos');
-    if (data.sucesso) setPlanos(data.dados);
+  const carregarPlanos = useCallback(async (isDemo) => {
+    if (isDemo) return;
+    try {
+      const data = await adminFetch('/planos');
+      if (data.sucesso) setPlanos(data.dados);
+    } catch {
+      console.warn('Erro ao carregar planos reais. Mantendo simulados.');
+    }
   }, []);
 
+  // Inicialização com detecção de rede
   useEffect(() => {
-    const token = localStorage.getItem('zullya_admin_token');
-    if (!token) { navigate('/admin/login'); return; }
-    carregarStats();
-    carregarTenants();
-    carregarPlanos();
-  }, [navigate, carregarStats, carregarTenants, carregarPlanos]);
+    const init = async () => {
+      const token = localStorage.getItem('zullya_admin_token');
+      if (!token) { navigate('/admin/login'); return; }
+
+      // Se for token demo, entra direto no modo demo
+      const isDemoToken = token === 'demo-admin-token';
+      const online = isDemoToken ? false : await checkBackend();
+      
+      setModoDemo(!online || isDemoToken);
+      
+      // Carregar
+      await Promise.all([
+        carregarStats(!online || isDemoToken),
+        carregarTenants(!online || isDemoToken),
+        carregarPlanos(!online || isDemoToken)
+      ]);
+      setLoading(false);
+    };
+
+    init();
+  }, [navigate, busca, filtroStatus, carregarStats, carregarTenants, carregarPlanos]);
 
   const logout = () => {
     localStorage.removeItem('zullya_admin_token');
     localStorage.removeItem('zullya_admin');
     navigate('/admin/login');
+  };
+
+  const desativarPlano = async (plano) => {
+    if (modoDemo) {
+      setPlanos(planos.filter(p => p.id !== plano.id));
+      toast.success(`Plano "${plano.nome}" removido (Modo Demo)`);
+      setConfirmDelete(null);
+      return;
+    }
+
+    try {
+      const res = await adminFetch(`/planos/${plano.id}`, { method: 'DELETE' });
+      if (res.sucesso) {
+        toast.success(`Plano "${plano.nome}" desativado.`);
+        carregarPlanos(false);
+      } else {
+        toast.error(res.mensagem || 'Erro ao desativar');
+      }
+    } catch {
+      toast.error('Erro de rede ao desativar plano');
+    }
+    setConfirmDelete(null);
+  };
+
+  // Salvar cliente após edição no modal
+  const handleSaveTenant = (atualizado) => {
+    if (modoDemo) {
+      setTenants(tenants.map(t => t.id === atualizado.id ? atualizado : t));
+      
+      // Recalcular status simulados rapidamente
+      const tempTenants = tenants.map(t => t.id === atualizado.id ? atualizado : t);
+      const mrrSoma = tempTenants.reduce((acc, t) => {
+        if (t.status !== 'ativo' || t.acesso_gratuito) return acc;
+        const p = planos.find(x => x.id === t.plano_id);
+        const valor = p ? p.valor_mensal : 0;
+        const desc = t.desconto_percentual ? (1 - t.desconto_percentual / 100) : 1;
+        return acc + (valor * desc);
+      }, 0);
+
+      setStats({
+        mrr: mrrSoma || INITIAL_STATS.mrr,
+        total_ativos: tempTenants.filter(t => t.status === 'ativo').length,
+        em_trial: tempTenants.filter(t => t.status === 'trial').length,
+        churned: tempTenants.filter(t => t.status === 'inadimplente').length
+      });
+      return;
+    }
+    // Online
+    carregarStats(false);
+    carregarTenants(false);
+  };
+
+  // Salvar/Criar plano após edição no modal
+  const handleSavePlano = (novoPlano) => {
+    if (modoDemo) {
+      const existe = planos.some(p => p.id === novoPlano.id);
+      if (existe) {
+        setPlanos(planos.map(p => p.id === novoPlano.id ? novoPlano : p));
+      } else {
+        setPlanos([...planos, novoPlano]);
+      }
+      return;
+    }
+    carregarPlanos(false);
   };
 
   const mrr = stats ? `R$ ${parseFloat(stats.mrr || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—';
@@ -629,7 +873,17 @@ export default function AdminPanel() {
             <BarChart2 size={18} color="#fff" />
           </div>
           <div>
-            <p style={{ fontWeight: 800, fontSize: 16, color: '#fff' }}>Zullya Admin</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <p style={{ fontWeight: 800, fontSize: 16, color: '#fff' }}>Zullya Admin</p>
+              {modoDemo && (
+                <span style={{
+                  fontSize: 10, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b',
+                  border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: 20, padding: '2px 8px', fontWeight: 700
+                }}>
+                  Modo Demo (Offline)
+                </span>
+              )}
+            </div>
             <p style={{ fontSize: 11, color: '#6b7280' }}>Painel de gestão da plataforma</p>
           </div>
         </div>
@@ -645,7 +899,7 @@ export default function AdminPanel() {
         {/* Stats */}
         {stats && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
-            <StatCard icon={TrendingUp}  label="MRR"             value={mrr}                  color="#7c3aed" />
+            <StatCard icon={TrendingUp}  label="MRR Estimado"    value={mrr}                  color="#7c3aed" />
             <StatCard icon={Users}       label="Clientes ativos" value={stats.total_ativos}    color="#10b981" />
             <StatCard icon={Clock}       label="Em trial"        value={stats.em_trial}         color="#f59e0b" />
             <StatCard icon={AlertCircle} label="Inadimplentes"   value={stats.churned}          color="#ef4444" />
@@ -697,7 +951,7 @@ export default function AdminPanel() {
                 <option value="cancelado">Cancelado</option>
                 <option value="expirado">Expirado</option>
               </select>
-              <button onClick={carregarTenants} style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 8, padding: '9px 14px', color: '#9ca3af', cursor: 'pointer' }}>
+              <button onClick={() => carregarTenants(modoDemo)} style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 8, padding: '9px 14px', color: '#9ca3af', cursor: 'pointer' }}>
                 <RefreshCw size={14} />
               </button>
             </div>
@@ -752,16 +1006,55 @@ export default function AdminPanel() {
         )}
 
         {/* Aba Planos */}
-        {aba === 'planos' && <PlanosTab />}
+        {aba === 'planos' && (
+          <PlanosTab
+            planos={planos}
+            loading={loading}
+            setModalPlano={setModalPlano}
+            setConfirmDelete={setConfirmDelete}
+            modoDemo={modoDemo}
+          />
+        )}
       </div>
 
       {selectedTenant && (
         <ClienteModal
           tenant={selectedTenant}
           planos={planos}
+          modoDemo={modoDemo}
           onClose={() => setSelectedTenant(null)}
-          onSave={() => { carregarStats(); carregarTenants(); }}
+          onSave={handleSaveTenant}
         />
+      )}
+
+      {/* Modal criar/editar plano */}
+      {modalPlano !== null && (
+        <PlanoModal
+          plano={Object.keys(modalPlano).length === 0 ? null : modalPlano}
+          modoDemo={modoDemo}
+          onClose={() => setModalPlano(null)}
+          onSave={handleSavePlano}
+        />
+      )}
+
+      {/* Confirm desativar */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 12, padding: 32, maxWidth: 420, width: '100%' }}>
+            <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Desativar plano "{confirmDelete.nome}"?</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 24 }}>
+              O plano ficará invisível para novos clientes. Clientes existentes não serão afetados.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => desativarPlano(confirmDelete)} style={{ flex: 1, padding: '10px 0', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontWeight: 700 }}>
+                Desativar
+              </button>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: '10px 0', background: '#2d2d35', border: 'none', borderRadius: 8, color: '#e5e7eb', cursor: 'pointer', fontWeight: 700 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
