@@ -42,7 +42,7 @@ export default function Header() {
         {/* CTAs desktop */}
         <div className="hidden md:flex items-center gap-3">
           <a
-            href={APP_URL}
+            href={`${APP_URL}/login`}
             className="text-sm text-[var(--text-muted)] hover:text-white transition-colors"
           >
             Entrar
@@ -79,7 +79,7 @@ export default function Header() {
             </Link>
           ))}
           <hr className="border-white/8" />
-          <a href={APP_URL} className="text-sm text-center text-[var(--text-muted)]">
+          <a href={`${APP_URL}/login`} className="text-sm text-center text-[var(--text-muted)]">
             Entrar
           </a>
           <a

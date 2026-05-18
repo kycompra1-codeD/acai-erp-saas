@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grape, Eye, EyeOff, Loader2, Shield, Wifi, WifiOff, X } from 'lucide-react';
+import { Grape, Eye, EyeOff, Loader2, Wifi, WifiOff, X } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/api';
@@ -48,11 +48,7 @@ export default function Login() {
     try {
       const result = await login(email, password);
       if (result?.sucesso) {
-        if (result?.demo) {
-          toast.success('Bem-vindo ao modo Demo! 🍇', { icon: '🎭' });
-        } else {
-          toast.success('Bem-vindo ao Zullya ERP!');
-        }
+        toast.success('Bem-vindo ao Zullya ERP!');
         navigate('/');
       } else {
         toast.error(result?.mensagem || 'Email ou senha incorretos');
@@ -97,16 +93,6 @@ export default function Login() {
     } finally {
       setGoogleLoading(false);
     }
-  };
-
-  const entrarDemo = async () => {
-    setLoading(true);
-    const result = await login('admin@demo.com', 'demo');
-    if (result?.sucesso) {
-      toast.success('Modo demonstração ativado 🎭');
-      navigate('/');
-    }
-    setLoading(false);
   };
 
   return (
@@ -263,28 +249,6 @@ export default function Login() {
             width="320"
           />
         </div>
-
-        {/* Botão demo */}
-        <button
-          type="button"
-          onClick={entrarDemo}
-          disabled={loading}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 16px',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            color: 'var(--text-muted)',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <Shield size={14} />
-          Entrar no Modo Demo (sem cadastro)
-        </button>
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 20 }}>
           Não tem conta?{' '}

@@ -66,7 +66,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Zullya ERP. Todos os direitos reservados.
           </p>
           <a
-            href={APP_URL}
+            href={`${APP_URL}/login`}
             className="text-xs text-[var(--primary-light)] hover:underline"
           >
             Acessar o sistema →
