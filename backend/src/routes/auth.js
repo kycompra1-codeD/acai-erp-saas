@@ -280,8 +280,10 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const { rows } = await query(
       `SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ultimo_acesso, u.avatar_url,
-              t.id as tenant_id, t.nome_empresa, t.status as tenant_status, t.logo_url,
-              p.nome as plano_nome, p.modulos
+              t.id as tenant_id, t.nome_empresa, t.status as tenant_status,
+              t.trial_expira_em, t.logo_url,
+              p.id as plano_id, p.nome as plano_nome, p.modulos,
+              p.max_usuarios, p.max_produtos
        FROM usuarios u
        JOIN tenants t ON t.id = u.tenant_id
        LEFT JOIN planos p ON p.id = t.plano_id

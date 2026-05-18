@@ -93,20 +93,26 @@ export function AuthProvider({ children }) {
 
   // ── Helper: definir sessão após login/registro ─────────────
   const _setSession = (dados, isDemo = false) => {
+    // Normaliza tanto o formato do /me (dados direto) quanto do login (dados.usuario)
+    const raw = dados.usuario ? dados : { ...dados, ...dados };
     const userObj = {
       id: dados.usuario?.id || dados.id,
       nome: dados.usuario?.nome || dados.nome,
-      name: dados.usuario?.nome || dados.nome, // compatibilidade com componentes antigos
+      name: dados.usuario?.nome || dados.nome,
       email: dados.usuario?.email || dados.email,
       nivel_permissao: dados.usuario?.nivel_permissao || dados.nivel_permissao,
-      role: dados.usuario?.nivel_permissao || dados.nivel_permissao, // compatibilidade
-      avatar: dados.usuario?.avatar_url || null,
+      role: dados.usuario?.nivel_permissao || dados.nivel_permissao,
+      avatar: dados.usuario?.avatar_url || dados.avatar_url || null,
     };
     const empresaObj = dados.empresa || {
       id: dados.tenant_id,
       nome_empresa: dados.nome_empresa,
       status: dados.tenant_status,
-      plano_nome: dados.plano_nome,
+      trial_expira_em: dados.trial_expira_em || null,
+      plano_id: dados.plano_id || null,
+      plano_nome: dados.plano_nome || null,
+      modulos: dados.modulos || null,
+      max_usuarios: dados.max_usuarios || null,
     };
 
     setUser(userObj);
@@ -194,12 +200,14 @@ export function AuthProvider({ children }) {
   // ── Logout ─────────────────────────────────────────────────
   const logout = async () => {
     if (backendOnline && !modoDemo) {
-      await authApi.logout();
+      try { await authApi.logout(); } catch { /* ignorar erro de rede */ }
     }
     setUser(null);
     setEmpresa(null);
     setModoDemo(false);
     localStorage.removeItem('zullya_auth');
+    localStorage.removeItem('zullya_access_token');
+    localStorage.removeItem('zullya_refresh_token');
   };
 
   // ── Verificar permissão ────────────────────────────────────
