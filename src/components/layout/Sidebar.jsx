@@ -33,12 +33,12 @@ const navItems = [
     { to: '/fiscal',       icon: FileText, label: 'Fiscal (NF-e)',     section: 'fiscal',       extensionId: 'fiscal', isNew: true },
     { to: '/loyalty',      icon: Heart,    label: 'Fidelidade (PRO)',   section: 'customers',    extensionId: 'loyalty', isNew: true },
     { to: '/bi',           icon: BrainCircuit, label: 'B.I. Avançado',  section: 'reports',      extensionId: 'bi', isNew: true },
-    { to: '/subscription', icon: Settings, label: 'Minha Assinatura', section: 'settings', isNew: true },
   ]},
-  { group: 'Análises', items: [
+  { group: 'Análises / Sistema', items: [
     { to: '/reports', icon: BarChart2, label: 'Relatórios', section: 'reports' },
     { to: '/settings/appearance', icon: LayoutDashboard, label: 'Aparência / Layout', section: 'settings', isNew: true },
     { to: '/permissions', icon: Shield, label: 'Permissões', section: 'settings' },
+    { to: '/my-account', icon: UserCog, label: 'Minha Conta', section: 'settings' },
     { to: '/settings', icon: Settings, label: 'Configurações', section: 'settings' },
   ]},
 ];

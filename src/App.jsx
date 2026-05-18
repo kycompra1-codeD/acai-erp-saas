@@ -26,6 +26,7 @@ import Kitchen from './pages/Kitchen';
 import Permissions from './pages/Permissions';
 import Purchases from './pages/Purchases';
 import Settings from './pages/Settings';
+import MyAccount from './pages/MyAccount';
 import Subscription from './pages/Subscription';
 import Sales from './pages/Sales';
 import Login from './pages/Login';
@@ -141,6 +142,7 @@ function App() {
               <Route path="/automations" element={<Layout><ModuloLocked modulo="automacoes"><Automations /></ModuloLocked></Layout>} />
               <Route path="/fiscal" element={<Layout><ModuloLocked modulo="nfe"><Fiscal /></ModuloLocked></Layout>} />
               <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
+              <Route path="/my-account" element={<Layout><MyAccount /></Layout>} />
               <Route path="/permissions" element={<Layout><Permissions /></Layout>} />
               <Route path="/settings" element={<Layout><Settings /></Layout>} />
               <Route path="/settings/appearance" element={<Layout><AppearanceSettings /></Layout>} />
