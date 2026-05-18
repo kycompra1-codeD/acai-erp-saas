@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, TrendingUp, AlertCircle, CheckCircle, Clock,
   LogOut, Search, RefreshCw, ChevronDown, X, Save,
-  Gift, Ban, Edit3, BarChart2,
+  Gift, Ban, Edit3, BarChart2, Package, Plus, Trash2,
+  Check, Star, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -29,12 +30,32 @@ function adminFetch(path, options = {}) {
 }
 
 const STATUS_COLOR = {
-  trial:       { bg: 'rgba(245,158,11,0.15)',  text: '#f59e0b',  label: 'Trial' },
-  ativo:       { bg: 'rgba(16,185,129,0.15)',  text: '#10b981',  label: 'Ativo' },
-  inadimplente:{ bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  label: 'Inadimplente' },
-  suspenso:    { bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  label: 'Suspenso' },
-  cancelado:   { bg: 'rgba(107,114,128,0.15)', text: '#6b7280',  label: 'Cancelado' },
+  trial:        { bg: 'rgba(245,158,11,0.15)',  text: '#f59e0b',  label: 'Trial' },
+  ativo:        { bg: 'rgba(16,185,129,0.15)',  text: '#10b981',  label: 'Ativo' },
+  inadimplente: { bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  label: 'Inadimplente' },
+  suspenso:     { bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  label: 'Suspenso' },
+  cancelado:    { bg: 'rgba(107,114,128,0.15)', text: '#6b7280',  label: 'Cancelado' },
+  expirado:     { bg: 'rgba(239,68,68,0.1)',    text: '#f87171',  label: 'Expirado' },
 };
+
+const MODULOS_LISTA = [
+  { id: 'vendas',             label: 'Vendas / PDV' },
+  { id: 'estoque',            label: 'Estoque' },
+  { id: 'clientes',           label: 'Clientes / CRM Básico' },
+  { id: 'financeiro',         label: 'Financeiro / DRE' },
+  { id: 'crm',                label: 'CRM Avançado' },
+  { id: 'nfe',                label: 'Fiscal / NF-e / NFC-e' },
+  { id: 'relatorios',         label: 'Relatórios / BI' },
+  { id: 'metas',              label: 'Metas e Comissões' },
+  { id: 'multi_filial',       label: 'Multi-filial / Franquia' },
+  { id: 'api_acesso',         label: 'API / Integrações' },
+  { id: 'suporte_prioritario',label: 'Suporte Prioritário' },
+  { id: 'automacoes',         label: 'Automações' },
+  { id: 'logistica',          label: 'Logística' },
+  { id: 'compras',            label: 'Compras / Fornecedores' },
+  { id: 'funcionarios',       label: 'RH / Funcionários' },
+  { id: 'fidelidade',         label: 'Programa de Fidelidade' },
+];
 
 function StatusBadge({ status }) {
   const s = STATUS_COLOR[status] || STATUS_COLOR.cancelado;
@@ -71,6 +92,7 @@ function StatCard({ icon: Icon, label, value, color }) {
   );
 }
 
+// ── Modal de edição de cliente ───────────────────────────────
 function ClienteModal({ tenant, planos, onClose, onSave }) {
   const [status, setStatus] = useState(tenant.status);
   const [planoId, setPlanoId] = useState(tenant.plano_id || '');
@@ -109,23 +131,16 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
       <div style={{
         background: '#1a1a1f', border: '1px solid #2d2d35',
         borderRadius: 16, padding: 32, width: '100%', maxWidth: 540,
-        maxHeight: '90vh', overflowY: 'auto',
-        position: 'relative',
+        maxHeight: '90vh', overflowY: 'auto', position: 'relative',
       }}>
-        <button onClick={onClose} style={{
-          position: 'absolute', top: 16, right: 16,
-          background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer',
-        }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>
           <X size={20} />
         </button>
 
-        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-          {tenant.nome_empresa}
-        </h2>
+        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{tenant.nome_empresa}</h2>
         <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 24 }}>{tenant.email_contato}</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {/* Status */}
           <div>
             <label style={labelStyle}>Status da conta</label>
             <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
@@ -134,23 +149,15 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
               <option value="inadimplente">Inadimplente</option>
               <option value="suspenso">Suspenso</option>
               <option value="cancelado">Cancelado</option>
+              <option value="expirado">Expirado</option>
             </select>
           </div>
-
           {['inadimplente', 'suspenso', 'cancelado'].includes(status) && (
             <div>
               <label style={labelStyle}>Motivo do bloqueio</label>
-              <input
-                type="text"
-                value={motivo}
-                onChange={e => setMotivo(e.target.value)}
-                placeholder="Ex: Fatura vencida há 30 dias"
-                style={inputStyle}
-              />
+              <input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex: Fatura vencida há 30 dias" style={inputStyle} />
             </div>
           )}
-
-          {/* Plano */}
           <div>
             <label style={labelStyle}>Plano</label>
             <select value={planoId} onChange={e => setPlanoId(e.target.value)} style={inputStyle}>
@@ -162,58 +169,26 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
               ))}
             </select>
           </div>
-
-          {/* Desconto */}
           <div>
             <label style={labelStyle}>Desconto individual (%)</label>
-            <input
-              type="number" min="0" max="100" step="5"
-              value={desconto}
-              onChange={e => setDesconto(e.target.value)}
-              style={inputStyle}
-            />
+            <input type="number" min="0" max="100" step="5" value={desconto} onChange={e => setDesconto(e.target.value)} style={inputStyle} />
             <p style={{ color: '#6b7280', fontSize: 11, marginTop: 4 }}>
               {desconto > 0 ? `Cliente paga ${100 - desconto}% do valor do plano` : 'Sem desconto aplicado'}
             </p>
           </div>
-
-          {/* Acesso gratuito */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ color: '#e5e7eb', fontSize: 14, fontWeight: 600 }}>Acesso gratuito</p>
               <p style={{ color: '#6b7280', fontSize: 12 }}>Mantém acesso sem cobrar</p>
             </div>
-            <button
-              onClick={() => setGratuito(v => !v)}
-              style={{
-                width: 44, height: 24, borderRadius: 12,
-                background: gratuito ? '#7c3aed' : '#374151',
-                border: 'none', cursor: 'pointer', position: 'relative',
-                transition: 'background 0.2s',
-              }}
-            >
-              <span style={{
-                position: 'absolute', width: 18, height: 18, borderRadius: '50%',
-                background: '#fff', top: 3,
-                left: gratuito ? 22 : 4,
-                transition: 'left 0.2s',
-              }} />
+            <button onClick={() => setGratuito(v => !v)} style={{ width: 44, height: 24, borderRadius: 12, background: gratuito ? '#7c3aed' : '#374151', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+              <span style={{ position: 'absolute', width: 18, height: 18, borderRadius: '50%', background: '#fff', top: 3, left: gratuito ? 22 : 4, transition: 'left 0.2s' }} />
             </button>
           </div>
-
-          {/* Notas internas */}
           <div>
             <label style={labelStyle}>Notas internas (só você vê)</label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              placeholder="Anotações sobre este cliente..."
-              rows={3}
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-            />
+            <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Anotações sobre este cliente..." rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
           </div>
-
-          {/* Info */}
           <div style={{ background: '#0f0f10', borderRadius: 8, padding: 12, fontSize: 12, color: '#6b7280' }}>
             <p>Usuários: <strong style={{ color: '#e5e7eb' }}>{tenant.total_usuarios}</strong></p>
             <p>Cadastrado: <strong style={{ color: '#e5e7eb' }}>{new Date(tenant.criado_em).toLocaleDateString('pt-BR')}</strong></p>
@@ -221,24 +196,367 @@ function ClienteModal({ tenant, planos, onClose, onSave }) {
               <p>Trial expira: <strong style={{ color: '#f59e0b' }}>{new Date(tenant.trial_expira_em).toLocaleDateString('pt-BR')}</strong></p>
             )}
           </div>
-
-          <button
-            onClick={save}
-            disabled={saving}
-            style={{
-              padding: '12px 0',
-              background: saving ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #db2777)',
-              border: 'none', borderRadius: 8,
-              color: '#fff', fontSize: 14, fontWeight: 700,
-              cursor: saving ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-          >
+          <button onClick={save} disabled={saving} style={{ padding: '12px 0', background: saving ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #db2777)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Save size={16} />
             {saving ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Modal de criação/edição de plano ─────────────────────────
+function PlanoModal({ plano, onClose, onSave }) {
+  const isNovo = !plano?.id;
+  const [form, setForm] = useState({
+    nome:         plano?.nome         ?? '',
+    descricao:    plano?.descricao    ?? '',
+    valor_mensal: plano?.valor_mensal ?? '',
+    valor_anual:  plano?.valor_anual  ?? '',
+    trial_dias:   plano?.trial_dias   ?? 14,
+    max_usuarios: plano?.max_usuarios ?? 3,
+    max_filiais:  plano?.max_filiais  ?? 1,
+    max_produtos: plano?.max_produtos ?? 500,
+    modulos:      Array.isArray(plano?.modulos) ? plano.modulos : [],
+    ativo:        plano?.ativo        ?? true,
+    destaque:     plano?.destaque     ?? false,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set = k => v => setForm(f => ({ ...f, [k]: v }));
+  const toggle = k => () => setForm(f => ({ ...f, [k]: !f[k] }));
+  const toggleModulo = (id) => setForm(f => ({
+    ...f,
+    modulos: f.modulos.includes(id)
+      ? f.modulos.filter(m => m !== id)
+      : [...f.modulos, id],
+  }));
+
+  const save = async () => {
+    if (!form.nome || !form.valor_mensal) {
+      toast.error('Nome e valor mensal são obrigatórios');
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = {
+        ...form,
+        valor_mensal: parseFloat(form.valor_mensal),
+        valor_anual: form.valor_anual ? parseFloat(form.valor_anual) : null,
+        trial_dias: parseInt(form.trial_dias),
+        max_usuarios: parseInt(form.max_usuarios),
+        max_filiais: parseInt(form.max_filiais),
+        max_produtos: parseInt(form.max_produtos),
+      };
+      const res = isNovo
+        ? await adminFetch('/planos', { method: 'POST', body: JSON.stringify(body) })
+        : await adminFetch(`/planos/${plano.id}`, { method: 'PUT', body: JSON.stringify(body) });
+
+      if (res.sucesso) {
+        toast.success(isNovo ? 'Plano criado!' : 'Plano atualizado!');
+        onSave();
+        onClose();
+      } else {
+        toast.error(res.mensagem || 'Erro ao salvar');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+      <div style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 16, padding: 32, width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>
+          <X size={20} />
+        </button>
+
+        <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
+          {isNovo ? 'Novo Plano' : `Editar: ${plano.nome}`}
+        </h2>
+        {!isNovo && plano.total_tenants_ativos > 0 && (
+          <p style={{ color: '#f59e0b', fontSize: 12, marginBottom: 20 }}>
+            ⚠️ {plano.total_tenants_ativos} cliente(s) ativo(s) neste plano. Alterações de módulos afetarão eles imediatamente.
+          </p>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 20 }}>
+          {/* Nome */}
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={labelStyle}>Nome do plano *</label>
+            <input value={form.nome} onChange={e => set('nome')(e.target.value)} placeholder="Ex: Starter, Pro Business, Enterprise" style={inputStyle} />
+          </div>
+          {/* Descrição */}
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={labelStyle}>Descrição</label>
+            <input value={form.descricao} onChange={e => set('descricao')(e.target.value)} placeholder="Breve descrição do plano para os clientes" style={inputStyle} />
+          </div>
+          {/* Valores */}
+          <div>
+            <label style={labelStyle}>Valor mensal (R$) *</label>
+            <input type="number" step="0.01" min="0" value={form.valor_mensal} onChange={e => set('valor_mensal')(e.target.value)} placeholder="Ex: 97.00" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Valor anual (R$) <span style={{ color: '#6b7280' }}>opcional</span></label>
+            <input type="number" step="0.01" min="0" value={form.valor_anual} onChange={e => set('valor_anual')(e.target.value)} placeholder="Ex: 934.00 (10% off)" style={inputStyle} />
+          </div>
+          {/* Limites */}
+          <div>
+            <label style={labelStyle}>Max. usuários *</label>
+            <input type="number" min="1" value={form.max_usuarios} onChange={e => set('max_usuarios')(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Dias de trial</label>
+            <input type="number" min="0" max="90" value={form.trial_dias} onChange={e => set('trial_dias')(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Max. filiais</label>
+            <input type="number" min="1" value={form.max_filiais} onChange={e => set('max_filiais')(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Max. produtos</label>
+            <input type="number" min="1" value={form.max_produtos} onChange={e => set('max_produtos')(e.target.value)} style={inputStyle} />
+          </div>
+          {/* Toggles */}
+          <div style={{ display: 'flex', gap: 24, gridColumn: '1/-1' }}>
+            {[
+              { key: 'ativo', label: 'Plano ativo', sub: 'Visível para clientes' },
+              { key: 'destaque', label: 'Destaque', sub: 'Badge "Mais Popular"' },
+            ].map(({ key, label, sub }) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, background: '#0f0f10', borderRadius: 8, padding: '12px 16px', border: '1px solid #2d2d35', cursor: 'pointer' }} onClick={toggle(key)}>
+                <div>
+                  <p style={{ color: '#e5e7eb', fontSize: 14, fontWeight: 600 }}>{label}</p>
+                  <p style={{ color: '#6b7280', fontSize: 11 }}>{sub}</p>
+                </div>
+                <button style={{ marginLeft: 'auto', width: 40, height: 22, borderRadius: 11, background: form[key] ? '#7c3aed' : '#374151', border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
+                  <span style={{ position: 'absolute', width: 16, height: 16, borderRadius: '50%', background: '#fff', top: 3, left: form[key] ? 21 : 3, transition: 'left 0.15s' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Módulos */}
+        <div style={{ marginTop: 24 }}>
+          <label style={{ ...labelStyle, marginBottom: 12 }}>Módulos incluídos ({form.modulos.length}/{MODULOS_LISTA.length})</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+            {MODULOS_LISTA.map(m => {
+              const ativo = form.modulos.includes(m.id);
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => toggleModulo(m.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                    border: `1px solid ${ativo ? '#7c3aed' : '#2d2d35'}`,
+                    background: ativo ? 'rgba(124,58,237,0.12)' : '#0f0f10',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                    background: ativo ? '#7c3aed' : '#374151',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {ativo && <Check size={12} color="#fff" />}
+                  </div>
+                  <span style={{ fontSize: 12, color: ativo ? '#c4b5fd' : '#9ca3af' }}>{m.label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => set('modulos')(MODULOS_LISTA.map(m => m.id))} style={{ fontSize: 11, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Selecionar todos</button>
+            <button type="button" onClick={() => set('modulos')([])} style={{ fontSize: 11, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar</button>
+          </div>
+        </div>
+
+        <button onClick={save} disabled={saving} style={{ marginTop: 28, width: '100%', padding: '13px 0', background: saving ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #db2777)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 15, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Save size={16} />
+          {saving ? 'Salvando...' : isNovo ? 'Criar Plano' : 'Salvar Alterações'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Aba de Planos ────────────────────────────────────────────
+function PlanosTab() {
+  const [planos, setPlanos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalPlano, setModalPlano] = useState(null); // null = fechado, {} = novo, objeto = editar
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    const data = await adminFetch('/planos');
+    if (data.sucesso) setPlanos(data.dados);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const desativar = async (plano) => {
+    const res = await adminFetch(`/planos/${plano.id}`, { method: 'DELETE' });
+    if (res.sucesso) {
+      toast.success(`Plano "${plano.nome}" desativado.`);
+      carregar();
+    } else {
+      toast.error(res.mensagem || 'Erro ao desativar');
+    }
+    setConfirmDelete(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>{planos.length} plano(s) cadastrado(s)</p>
+        <button
+          onClick={() => setModalPlano({})}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '9px 18px', borderRadius: 8,
+            background: 'linear-gradient(135deg, #7c3aed, #db2777)',
+            border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          <Plus size={15} /> Novo Plano
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#6b7280' }}>Carregando...</div>
+      ) : planos.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#6b7280' }}>Nenhum plano cadastrado</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {planos.map(p => {
+            const modulosArr = Array.isArray(p.modulos)
+              ? p.modulos
+              : (typeof p.modulos === 'string' ? JSON.parse(p.modulos || '[]') : []);
+
+            return (
+              <div key={p.id} style={{
+                background: '#1a1a1f',
+                border: `1px solid ${p.destaque ? '#7c3aed' : '#2d2d35'}`,
+                borderRadius: 12, padding: 20, position: 'relative',
+                opacity: p.ativo ? 1 : 0.5,
+              }}>
+                {p.destaque && (
+                  <div style={{
+                    position: 'absolute', top: -8, right: 16,
+                    background: '#7c3aed', color: '#fff',
+                    fontSize: 10, fontWeight: 800, padding: '2px 10px', borderRadius: 20,
+                  }}>
+                    ★ DESTAQUE
+                  </div>
+                )}
+                {!p.ativo && (
+                  <div style={{
+                    position: 'absolute', top: -8, left: 16,
+                    background: '#374151', color: '#9ca3af',
+                    fontSize: 10, fontWeight: 800, padding: '2px 10px', borderRadius: 20,
+                  }}>
+                    INATIVO
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div>
+                    <p style={{ color: '#fff', fontWeight: 800, fontSize: 17 }}>{p.nome}</p>
+                    {p.descricao && <p style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>{p.descricao}</p>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18 }}>
+                      R$ {parseFloat(p.valor_mensal).toFixed(2)}
+                    </p>
+                    <p style={{ color: '#6b7280', fontSize: 11 }}>/mês</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
+                  <span>👥 {p.max_usuarios} usuários</span>
+                  <span>📅 {p.trial_dias}d trial</span>
+                  <span>🏢 {p.max_filiais} filial</span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+                  {modulosArr.slice(0, 5).map(m => {
+                    const mod = MODULOS_LISTA.find(x => x.id === m);
+                    return (
+                      <span key={m} style={{
+                        background: 'rgba(124,58,237,0.15)', color: '#a78bfa',
+                        border: '1px solid rgba(124,58,237,0.2)',
+                        fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
+                      }}>
+                        {mod?.label || m}
+                      </span>
+                    );
+                  })}
+                  {modulosArr.length > 5 && (
+                    <span style={{ fontSize: 10, color: '#6b7280', padding: '2px 4px' }}>
+                      +{modulosArr.length - 5} mais
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ borderTop: '1px solid #2d2d35', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: p.total_tenants_ativos > 0 ? '#10b981' : '#6b7280' }}>
+                    {p.total_tenants_ativos || 0} cliente(s) ativo(s)
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => setModalPlano(p)}
+                      style={{ background: '#2d2d35', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#e5e7eb', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Edit3 size={12} /> Editar
+                    </button>
+                    {p.ativo && (
+                      <button
+                        onClick={() => setConfirmDelete(p)}
+                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '6px 10px', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal criar/editar plano */}
+      {modalPlano !== null && (
+        <PlanoModal
+          plano={Object.keys(modalPlano).length === 0 ? null : modalPlano}
+          onClose={() => setModalPlano(null)}
+          onSave={carregar}
+        />
+      )}
+
+      {/* Confirm desativar */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 12, padding: 32, maxWidth: 420, width: '100%' }}>
+            <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Desativar plano "{confirmDelete.nome}"?</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 24 }}>
+              O plano ficará invisível para novos clientes. Clientes existentes não serão afetados.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => desativar(confirmDelete)} style={{ flex: 1, padding: '10px 0', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontWeight: 700 }}>
+                Desativar
+              </button>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: '10px 0', background: '#2d2d35', border: 'none', borderRadius: 8, color: '#e5e7eb', cursor: 'pointer', fontWeight: 700 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -251,6 +569,7 @@ const inputStyle = {
   color: '#fff', fontSize: 14, outline: 'none',
 };
 
+// ── Painel Admin principal ───────────────────────────────────
 export default function AdminPanel() {
   const navigate = useNavigate();
   const admin = JSON.parse(localStorage.getItem('zullya_admin') || '{}');
@@ -304,17 +623,9 @@ export default function AdminPanel() {
   return (
     <div style={{ minHeight: '100vh', background: '#0f0f10', color: '#e5e7eb' }}>
       {/* Header */}
-      <div style={{
-        background: '#1a1a1f', borderBottom: '1px solid #2d2d35',
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <div style={{ background: '#1a1a1f', borderBottom: '1px solid #2d2d35', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #7c3aed, #db2777)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #db2777)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <BarChart2 size={18} color="#fff" />
           </div>
           <div>
@@ -324,161 +635,126 @@ export default function AdminPanel() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <p style={{ fontSize: 13, color: '#9ca3af' }}>Olá, {admin.nome || 'Admin'}</p>
-          <button onClick={logout} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'none', border: '1px solid #2d2d35',
-            borderRadius: 8, padding: '6px 12px',
-            color: '#9ca3af', cursor: 'pointer', fontSize: 13,
-          }}>
+          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid #2d2d35', borderRadius: 8, padding: '6px 12px', color: '#9ca3af', cursor: 'pointer', fontSize: 13 }}>
             <LogOut size={14} /> Sair
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: 1300, margin: '0 auto', padding: '32px 24px' }}>
         {/* Stats */}
         {stats && (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 16, marginBottom: 32,
-          }}>
-            <StatCard icon={TrendingUp}  label="MRR"             value={mrr}                       color="#7c3aed" />
-            <StatCard icon={Users}       label="Clientes ativos" value={stats.total_ativos}         color="#10b981" />
-            <StatCard icon={Clock}       label="Em trial"        value={stats.em_trial}             color="#f59e0b" />
-            <StatCard icon={AlertCircle} label="Inadimplentes"   value={stats.churned}              color="#ef4444" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
+            <StatCard icon={TrendingUp}  label="MRR"             value={mrr}                  color="#7c3aed" />
+            <StatCard icon={Users}       label="Clientes ativos" value={stats.total_ativos}    color="#10b981" />
+            <StatCard icon={Clock}       label="Em trial"        value={stats.em_trial}         color="#f59e0b" />
+            <StatCard icon={AlertCircle} label="Inadimplentes"   value={stats.churned}          color="#ef4444" />
           </div>
         )}
 
         {/* Abas */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-          {[{ id: 'clientes', label: `Clientes (${total})` }].map(a => (
-            <button key={a.id} onClick={() => setAba(a.id)} style={{
-              padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-              background: aba === a.id ? 'linear-gradient(135deg, #7c3aed, #db2777)' : '#1a1a1f',
-              border: `1px solid ${aba === a.id ? 'transparent' : '#2d2d35'}`,
-              color: aba === a.id ? '#fff' : '#9ca3af', cursor: 'pointer',
-            }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+          {[
+            { id: 'clientes', label: `Clientes (${total})`, icon: Users },
+            { id: 'planos',   label: 'Gestão de Planos',   icon: Package },
+          ].map(a => (
+            <button
+              key={a.id}
+              onClick={() => setAba(a.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                background: aba === a.id ? 'linear-gradient(135deg, #7c3aed, #db2777)' : '#1a1a1f',
+                border: `1px solid ${aba === a.id ? 'transparent' : '#2d2d35'}`,
+                color: aba === a.id ? '#fff' : '#9ca3af', cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              <a.icon size={15} />
               {a.label}
             </button>
           ))}
         </div>
 
-        {/* Filtros */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
-            <input
-              type="text"
-              placeholder="Buscar por empresa ou e-mail..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                background: '#1a1a1f', border: '1px solid #2d2d35',
-                borderRadius: 8, padding: '9px 12px 9px 36px',
-                color: '#fff', fontSize: 13, outline: 'none',
-              }}
-            />
-          </div>
-          <select
-            value={filtroStatus}
-            onChange={e => setFiltroStatus(e.target.value)}
-            style={{
-              background: '#1a1a1f', border: '1px solid #2d2d35',
-              borderRadius: 8, padding: '9px 14px',
-              color: '#9ca3af', fontSize: 13, outline: 'none', cursor: 'pointer',
-            }}
-          >
-            <option value="">Todos os status</option>
-            <option value="trial">Trial</option>
-            <option value="ativo">Ativo</option>
-            <option value="inadimplente">Inadimplente</option>
-            <option value="suspenso">Suspenso</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-          <button
-            onClick={carregarTenants}
-            style={{
-              background: '#1a1a1f', border: '1px solid #2d2d35',
-              borderRadius: 8, padding: '9px 14px',
-              color: '#9ca3af', cursor: 'pointer',
-            }}
-          >
-            <RefreshCw size={14} />
-          </button>
-        </div>
+        {/* Aba Clientes */}
+        {aba === 'clientes' && (
+          <>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+                <input
+                  type="text" placeholder="Buscar por empresa ou e-mail..."
+                  value={busca} onChange={e => setBusca(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 8, padding: '9px 12px 9px 36px', color: '#fff', fontSize: 13, outline: 'none' }}
+                />
+              </div>
+              <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 8, padding: '9px 14px', color: '#9ca3af', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+                <option value="">Todos os status</option>
+                <option value="trial">Trial</option>
+                <option value="ativo">Ativo</option>
+                <option value="inadimplente">Inadimplente</option>
+                <option value="suspenso">Suspenso</option>
+                <option value="cancelado">Cancelado</option>
+                <option value="expirado">Expirado</option>
+              </select>
+              <button onClick={carregarTenants} style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 8, padding: '9px 14px', color: '#9ca3af', cursor: 'pointer' }}>
+                <RefreshCw size={14} />
+              </button>
+            </div>
 
-        {/* Tabela */}
-        <div style={{
-          background: '#1a1a1f', border: '1px solid #2d2d35',
-          borderRadius: 12, overflow: 'hidden',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #2d2d35' }}>
-                {['Empresa', 'Plano', 'Status', 'Usuários', 'Desconto', 'Cadastro', 'Ações'].map(h => (
-                  <th key={h} style={{
-                    padding: '12px 16px', textAlign: 'left',
-                    color: '#6b7280', fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Carregando...</td></tr>
-              ) : tenants.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Nenhum cliente encontrado</td></tr>
-              ) : tenants.map(t => (
-                <tr key={t.id} style={{ borderBottom: '1px solid #2d2d35' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#0f0f10'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <td style={{ padding: '12px 16px' }}>
-                    <p style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{t.nome_empresa}</p>
-                    <p style={{ color: '#6b7280', fontSize: 11 }}>{t.email_contato}</p>
-                    {t.acesso_gratuito && (
-                      <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700 }}>🎁 GRÁTIS</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#9ca3af', fontSize: 13 }}>
-                    {t.plano_nome || '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <StatusBadge status={t.status} />
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#9ca3af', fontSize: 13 }}>
-                    {t.total_usuarios}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: t.desconto_percentual > 0 ? '#7c3aed' : '#6b7280', fontSize: 13, fontWeight: 600 }}>
-                    {t.desconto_percentual > 0 ? `${t.desconto_percentual}%` : '—'}
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 12 }}>
-                    {new Date(t.criado_em).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <button
-                      onClick={() => setSelectedTenant(t)}
-                      style={{
-                        background: '#2d2d35', border: 'none',
-                        borderRadius: 6, padding: '6px 12px',
-                        color: '#e5e7eb', cursor: 'pointer', fontSize: 12,
-                        display: 'flex', alignItems: 'center', gap: 6,
-                      }}
+            <div style={{ background: '#1a1a1f', border: '1px solid #2d2d35', borderRadius: 12, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #2d2d35' }}>
+                    {['Empresa', 'Plano', 'Status', 'Usuários', 'Desconto', 'Trial/Venc.', 'Cadastro', 'Ações'].map(h => (
+                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: '#6b7280', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Carregando...</td></tr>
+                  ) : tenants.length === 0 ? (
+                    <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Nenhum cliente encontrado</td></tr>
+                  ) : tenants.map(t => (
+                    <tr key={t.id} style={{ borderBottom: '1px solid #2d2d35' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#0f0f10'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <Edit3 size={12} /> Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td style={{ padding: '12px 16px' }}>
+                        <p style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{t.nome_empresa}</p>
+                        <p style={{ color: '#6b7280', fontSize: 11 }}>{t.email_contato}</p>
+                        {t.acesso_gratuito && <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700 }}>🎁 GRÁTIS</span>}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#9ca3af', fontSize: 13 }}>{t.plano_nome || '—'}</td>
+                      <td style={{ padding: '12px 16px' }}><StatusBadge status={t.status} /></td>
+                      <td style={{ padding: '12px 16px', color: '#9ca3af', fontSize: 13 }}>{t.total_usuarios}</td>
+                      <td style={{ padding: '12px 16px', color: t.desconto_percentual > 0 ? '#7c3aed' : '#6b7280', fontSize: 13, fontWeight: 600 }}>
+                        {t.desconto_percentual > 0 ? `${t.desconto_percentual}%` : '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 12 }}>
+                        {t.trial_expira_em ? new Date(t.trial_expira_em).toLocaleDateString('pt-BR') : '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 12 }}>{new Date(t.criado_em).toLocaleDateString('pt-BR')}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <button onClick={() => setSelectedTenant(t)} style={{ background: '#2d2d35', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#e5e7eb', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Edit3 size={12} /> Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Aba Planos */}
+        {aba === 'planos' && <PlanosTab />}
       </div>
 
-      {/* Modal de edição */}
       {selectedTenant && (
         <ClienteModal
           tenant={selectedTenant}

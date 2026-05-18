@@ -289,13 +289,154 @@ router.patch('/tenants/:id/notas', adminMiddleware, [
 });
 
 // ============================================================
-// GET /api/admin/planos — Listar planos disponíveis
+// GET /api/admin/planos — Listar todos os planos (admin)
 // ============================================================
 router.get('/planos', adminMiddleware, async (req, res) => {
   try {
-    const { rows } = await query('SELECT id, nome, valor_mensal, max_usuarios FROM planos WHERE ativo = true ORDER BY valor_mensal');
+    const { rows } = await query(`
+      SELECT p.*,
+        COUNT(t.id) FILTER (WHERE t.status IN ('ativo','trial')) AS total_tenants_ativos,
+        COUNT(t.id) AS total_tenants
+      FROM planos p
+      LEFT JOIN tenants t ON t.plano_id = p.id
+      GROUP BY p.id
+      ORDER BY p.valor_mensal
+    `);
     return res.json({ sucesso: true, dados: rows });
   } catch (err) {
+    console.error('❌ GET planos:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// POST /api/admin/planos — Criar novo plano
+// ============================================================
+router.post('/planos', adminMiddleware, [
+  body('nome').notEmpty().trim(),
+  body('descricao').optional().trim(),
+  body('valor_mensal').isFloat({ min: 0 }),
+  body('valor_anual').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('trial_dias').optional().isInt({ min: 0 }),
+  body('max_usuarios').isInt({ min: 1 }),
+  body('max_filiais').optional().isInt({ min: 1 }),
+  body('max_produtos').optional().isInt({ min: 1 }),
+  body('modulos').isArray(),
+  body('ativo').optional().isBoolean(),
+  body('destaque').optional().isBoolean(),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  const {
+    nome, descricao, valor_mensal, valor_anual, trial_dias = 14,
+    max_usuarios, max_filiais = 1, max_produtos = 500,
+    modulos = [], ativo = true, destaque = false,
+  } = req.body;
+
+  try {
+    const { rows } = await query(`
+      INSERT INTO planos (
+        nome, descricao, valor_mensal, valor_anual, trial_dias,
+        max_usuarios, max_filiais, max_produtos, modulos, ativo, destaque
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING *
+    `, [nome, descricao || null, valor_mensal, valor_anual || null, trial_dias,
+        max_usuarios, max_filiais, max_produtos, JSON.stringify(modulos), ativo, destaque]);
+
+    return res.status(201).json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ POST planos:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// PUT /api/admin/planos/:id — Atualizar plano
+// ============================================================
+router.put('/planos/:id', adminMiddleware, [
+  body('nome').notEmpty().trim(),
+  body('descricao').optional({ nullable: true }).trim(),
+  body('valor_mensal').isFloat({ min: 0 }),
+  body('valor_anual').optional({ nullable: true }).isFloat({ min: 0 }),
+  body('trial_dias').optional().isInt({ min: 0 }),
+  body('max_usuarios').isInt({ min: 1 }),
+  body('max_filiais').optional().isInt({ min: 1 }),
+  body('max_produtos').optional().isInt({ min: 1 }),
+  body('modulos').isArray(),
+  body('ativo').optional().isBoolean(),
+  body('destaque').optional().isBoolean(),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  const {
+    nome, descricao, valor_mensal, valor_anual, trial_dias,
+    max_usuarios, max_filiais, max_produtos, modulos, ativo, destaque,
+  } = req.body;
+
+  try {
+    const { rows } = await query(`
+      UPDATE planos SET
+        nome         = COALESCE($1, nome),
+        descricao    = $2,
+        valor_mensal = COALESCE($3, valor_mensal),
+        valor_anual  = $4,
+        trial_dias   = COALESCE($5, trial_dias),
+        max_usuarios = COALESCE($6, max_usuarios),
+        max_filiais  = COALESCE($7, max_filiais),
+        max_produtos = COALESCE($8, max_produtos),
+        modulos      = COALESCE($9, modulos),
+        ativo        = COALESCE($10, ativo),
+        destaque     = COALESCE($11, destaque),
+        atualizado_em = NOW()
+      WHERE id = $12
+      RETURNING *
+    `, [
+      nome, descricao ?? null, valor_mensal, valor_anual ?? null,
+      trial_dias ?? null, max_usuarios ?? null, max_filiais ?? null,
+      max_produtos ?? null, modulos ? JSON.stringify(modulos) : null,
+      ativo ?? null, destaque ?? null, req.params.id,
+    ]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ sucesso: false, mensagem: 'Plano não encontrado.' });
+    }
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ PUT planos:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// DELETE /api/admin/planos/:id — Desativar plano (soft delete)
+// ============================================================
+router.delete('/planos/:id', adminMiddleware, async (req, res) => {
+  try {
+    // Verificar se há tenants ativos neste plano
+    const { rows: check } = await query(
+      `SELECT COUNT(*) FROM tenants WHERE plano_id = $1 AND status IN ('ativo','trial')`,
+      [req.params.id]
+    );
+    if (parseInt(check[0].count) > 0) {
+      return res.status(409).json({
+        sucesso: false,
+        mensagem: `Não é possível desativar: ${check[0].count} cliente(s) ativo(s) neste plano.`,
+      });
+    }
+
+    const { rows } = await query(
+      `UPDATE planos SET ativo = false, atualizado_em = NOW()
+       WHERE id = $1 RETURNING id, nome, ativo`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ sucesso: false, mensagem: 'Plano não encontrado.' });
+    }
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ DELETE planos:', err);
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
   }
 });

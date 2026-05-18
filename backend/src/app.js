@@ -57,12 +57,9 @@ const authLimiter = rateLimit({
 // ============================================================
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ATENÇÃO: O webhook usa express.raw(), então precisa vir ANTES do express.json()
-// O arquivo webhook.js já define seu próprio parser
-
-// Parser JSON para rotas normais
+// ATENÇÃO: webhooks têm parsers próprios — excluir do express.json global
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/webhooks')) return next(); // webhooks têm parser próprio
+  if (req.path.startsWith('/api/webhooks')) return next();
   express.json({ limit: '10mb' })(req, res, next);
 });
 app.use(express.urlencoded({ extended: true }));
@@ -84,6 +81,7 @@ const financeiroRoutes = require('./routes/financeiro');
 const dashboardRoutes = require('./routes/dashboard');
 const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
+const pagamentosRoutes = require('./routes/pagamentos');
 
 // Health check
 app.get('/health', (req, res) => {
@@ -110,6 +108,7 @@ app.use('/api/financeiro', financeiroRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/pagamentos', pagamentosRoutes);
 
 // ============================================================
 // Rota 404
@@ -140,6 +139,14 @@ const start = async () => {
 
   // Conectar Redis (opcional — não trava se indisponível)
   await connectRedis();
+
+  // Iniciar crons (trial expiry + lembretes)
+  try {
+    const { iniciarCrons } = require('./services/cronService');
+    iniciarCrons();
+  } catch (err) {
+    console.warn('⚠️  Crons não iniciados (node-cron ausente?):', err.message);
+  }
 
   // Testar conexão com PostgreSQL
   const dbOk = await testConnection();

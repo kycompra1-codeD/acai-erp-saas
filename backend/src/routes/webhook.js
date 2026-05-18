@@ -213,12 +213,80 @@ const extrairDados = (dados) => ({
 });
 
 // ============================================================
-// GET /api/webhooks/status - Health check do webhook
+// POST /api/webhooks/mercadopago - Eventos do Mercado Pago
+// ============================================================
+router.post('/mercadopago', express.json(), async (req, res) => {
+  const body = req.body || {};
+  const action = body.action || body.type || '';
+  const dataId = body.data?.id;
+
+  // Responder imediatamente ao MP (evita timeout de 5s)
+  res.status(200).json({ recebido: true });
+
+  if (!dataId) return;
+
+  // Salvar log
+  let logId;
+  try {
+    const { rows } = await query(
+      `INSERT INTO webhook_logs (gateway, evento, payload) VALUES ('mercadopago', $1, $2) RETURNING id`,
+      [action, body]
+    );
+    logId = rows[0]?.id;
+  } catch (err) {
+    console.error('❌ Log webhook MP:', err.message);
+  }
+
+  try {
+    // Buscar detalhes do pagamento na API do MP
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) return;
+
+    const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${dataId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!mpRes.ok) return;
+    const payment = await mpRes.json();
+
+    const tenantId = payment.external_reference || payment.metadata?.tenant_id;
+    const planoId  = payment.metadata?.plano_id;
+    const periodo  = payment.metadata?.periodo || 'mensal';
+    const valor    = payment.transaction_amount || 0;
+
+    if (!tenantId) return;
+
+    if (payment.status === 'approved') {
+      await handlePagamentoAprovado({
+        tenant_id: tenantId,
+        plano_id: planoId,
+        gateway_subscription_id: String(dataId),
+        periodo,
+        valor,
+      });
+    } else if (payment.status === 'cancelled' || payment.status === 'refunded') {
+      await handleAssinaturaCancelada({ tenant_id: tenantId, gateway_subscription_id: String(dataId) });
+    } else if (payment.status === 'rejected' || payment.status === 'charged_back') {
+      await handlePagamentoVencido({ tenant_id: tenantId });
+    }
+
+    if (logId) {
+      await query('UPDATE webhook_logs SET processado = true WHERE id = $1', [logId]);
+    }
+  } catch (err) {
+    console.error('❌ Webhook MP processamento:', err.message);
+    if (logId) {
+      await query('UPDATE webhook_logs SET erro = $1 WHERE id = $2', [err.message, logId]);
+    }
+  }
+});
+
+// ============================================================
+// GET /api/webhooks/status - Health check
 // ============================================================
 router.get('/status', (req, res) => {
   res.json({
     status: 'ok',
-    mensagem: 'Endpoint de webhook RRPay ativo.',
+    gateways: ['rrpay', 'mercadopago'],
     timestamp: new Date().toISOString(),
   });
 });

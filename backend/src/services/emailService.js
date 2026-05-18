@@ -105,4 +105,74 @@ async function enviarRedefinicaoSenha({ email, nome, token }) {
   });
 }
 
-module.exports = { enviarBoasVindas, enviarRedefinicaoSenha };
+// ── Lembrete de trial expirando ──────────────────────────────
+async function enviarLembreteTrialExpirando({ email, nome, nomeEmpresa, diasRestantes }) {
+  const urgencia = diasRestantes <= 1
+    ? { cor: '#ef4444', titulo: '🚨 Último dia do seu trial!', tag: 'URGENTE' }
+    : diasRestantes <= 3
+    ? { cor: '#f59e0b', titulo: '⚠️ Seu trial expira em breve', tag: `${diasRestantes} DIAS` }
+    : { cor: '#7c3aed', titulo: '⏰ Lembrete do seu período de avaliação', tag: `${diasRestantes} DIAS` };
+
+  const html = layoutBase(`
+    <div class="header" style="background:linear-gradient(135deg,${urgencia.cor},#7c3aed)">
+      <h1>${urgencia.titulo}</h1>
+      <p>Zullya ERP · Período de avaliação</p>
+    </div>
+    <div class="body">
+      <p>Olá, <strong>${nome}</strong>!</p>
+      <p>O período de avaliação gratuita da empresa <strong>${nomeEmpresa}</strong>
+         expira em <strong style="color:${urgencia.cor}">${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}</strong>.</p>
+      <p>Para continuar usando o Zullya ERP sem interrupções, assine um plano agora:</p>
+      <p style="text-align:center">
+        <a class="btn" href="${APP_URL}/assinatura" style="background:linear-gradient(135deg,${urgencia.cor},#7c3aed)">
+          Ver Planos e Assinar
+        </a>
+      </p>
+      <div class="divider"></div>
+      <p style="font-size:12px;color:#666">
+        Após o vencimento seu acesso será suspenso temporariamente.
+        Você pode reativar a qualquer momento assinando um plano.
+      </p>
+    </div>`);
+
+  return enviar({
+    to: email,
+    subject: `${urgencia.titulo} — ${nomeEmpresa}`,
+    html,
+  });
+}
+
+// ── Trial expirado ───────────────────────────────────────────
+async function enviarTrialExpirado({ email, nome, nomeEmpresa }) {
+  const html = layoutBase(`
+    <div class="header" style="background:linear-gradient(135deg,#374151,#1f2937)">
+      <h1>🔒 Período gratuito encerrado</h1>
+      <p>Zullya ERP · Reative sua conta</p>
+    </div>
+    <div class="body">
+      <p>Olá, <strong>${nome}</strong>!</p>
+      <p>O período de avaliação gratuita da empresa <strong>${nomeEmpresa}</strong> encerrou.</p>
+      <p>Seus dados estão <strong>seguros e preservados</strong>. Assine um plano para retomar o acesso imediatamente.</p>
+      <p style="text-align:center">
+        <a class="btn" href="${APP_URL}/assinatura">Reativar Minha Conta</a>
+      </p>
+      <div class="divider"></div>
+      <p style="font-size:12px;color:#666">
+        Os dados serão mantidos por 30 dias após o encerramento do trial.
+        Após isso, a conta pode ser removida permanentemente.
+      </p>
+    </div>`);
+
+  return enviar({
+    to: email,
+    subject: `Seu acesso ao Zullya ERP foi suspenso — ${nomeEmpresa}`,
+    html,
+  });
+}
+
+module.exports = {
+  enviarBoasVindas,
+  enviarRedefinicaoSenha,
+  enviarLembreteTrialExpirando,
+  enviarTrialExpirado,
+};
