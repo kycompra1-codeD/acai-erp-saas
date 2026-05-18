@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Loader2, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API = import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');

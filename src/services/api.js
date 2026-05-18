@@ -3,7 +3,7 @@
 // Centraliza todas as chamadas ao backend Node.js
 // ============================================================
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api';
 
 // ============================================================
 // Helpers internos

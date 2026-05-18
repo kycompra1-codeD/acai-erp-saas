@@ -121,7 +121,7 @@ export function AuthProvider({ children }) {
   // ── Login Google ───────────────────────────────────────────
   const loginGoogle = async (credential) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/google`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api'}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential }),
@@ -146,7 +146,7 @@ export function AuthProvider({ children }) {
   // ── Registro via Google (após preencher nome da empresa) ───
   const registroGoogle = async ({ google_id, email, nome, nome_empresa, avatar_url }) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/registro-google`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api'}/auth/registro-google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ google_id, email, nome, nome_empresa, avatar_url }),
