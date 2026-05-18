@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
@@ -8,14 +8,14 @@ import { useAuth } from '../../contexts/AuthContext';
 export function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user, login } = useAuth();
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
-  // Auto-login demo quando não há sessão (garante sidebar sempre visível)
   useEffect(() => {
-    if (!user) {
-      login('admin@zullya.com.br', 'admin123');
+    if (!loading && !user) {
+      navigate('/login', { replace: true });
     }
-  }, [user, login]);
+  }, [user, loading, navigate]);
 
   // Fechar sidebar ao mudar de rota (mobile)
   useEffect(() => {

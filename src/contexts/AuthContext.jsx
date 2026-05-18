@@ -162,6 +162,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Registro com email/senha ───────────────────────────────
+  const registro = async ({ nome, email, senha, nome_empresa }) => {
+    try {
+      const dados = await authApi.registro({ nome, email, senha, nome_empresa });
+      _setSession(dados, false);
+      return { sucesso: true };
+    } catch (err) {
+      return { sucesso: false, mensagem: err.message };
+    }
+  };
+
   // ── Login ──────────────────────────────────────────────────
   const login = async (email, password) => {
     // Modo DEMO (backend offline ou credenciais demo)
@@ -204,6 +215,7 @@ export function AuthProvider({ children }) {
       user,
       empresa,
       login,
+      registro,
       loginGoogle,
       registroGoogle,
       logout,

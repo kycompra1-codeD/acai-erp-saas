@@ -29,6 +29,7 @@ import Settings from './pages/Settings';
 import Subscription from './pages/Subscription';
 import Sales from './pages/Sales';
 import Login from './pages/Login';
+import Registro from './pages/Registro';
 import ResetSenha from './pages/ResetSenha';
 import AdminLogin from './pages/AdminLogin';
 import AdminPanel from './pages/AdminPanel';
@@ -45,6 +46,7 @@ function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/registro" element={<Registro />} />
               <Route path="/redefinir-senha" element={<ResetSenha />} />
               <Route
                 path="/"

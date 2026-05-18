@@ -288,12 +288,9 @@ export default function Login() {
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 20 }}>
           Não tem conta?{' '}
-          <span
-            style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
-            onClick={() => toast('Use "Entrar com Google" para criar sua conta grátis!', { icon: '🚀' })}
-          >
-            Criar conta grátis
-          </span>
+          <a href="/registro" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+            Testar 14 dias grátis
+          </a>
         </p>
       </div>
 
