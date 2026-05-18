@@ -83,8 +83,8 @@ const relatoriosRoutes = require('./routes/relatorios');
 const adminRoutes = require('./routes/admin');
 const pagamentosRoutes = require('./routes/pagamentos');
 
-// Health check
-app.get('/health', (req, res) => {
+// Health check (ambos os paths por compatibilidade)
+const healthHandler = (req, res) => {
   res.json({
     status: 'ok',
     servico: 'Zullya ERP Backend',
@@ -92,7 +92,9 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     ambiente: process.env.NODE_ENV,
   });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/usuarios', usuariosRoutes);

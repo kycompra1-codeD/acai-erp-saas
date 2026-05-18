@@ -283,7 +283,7 @@ export const relatoriosApi = {
 // ============================================================
 export const checkBackend = async () => {
   try {
-    const res = await fetch(`${API_URL.replace('/api', '')}/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) });
     return res.ok;
   } catch {
     return false;

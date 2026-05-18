@@ -61,7 +61,6 @@ export default function Login() {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
-    if (!backendOnline) { toast.error('API offline. Use email e senha.'); return; }
     setLoading(true);
     try {
       const result = await loginGoogle(credentialResponse.credential);
