@@ -67,7 +67,11 @@ export default function Login() {
       if (result?.precisa_completar_cadastro) {
         setGoogleCadastro(result.google_dados);
       } else if (result?.sucesso) {
-        toast.success('Bem-vindo ao Zullya ERP!');
+        if (result?.demo) {
+          toast.success('Bem-vindo! Modo demonstração ativo.');
+        } else {
+          toast.success('Bem-vindo ao Zullya ERP!');
+        }
         navigate('/');
       } else {
         toast.error(result?.mensagem || 'Erro ao entrar com Google');

@@ -124,8 +124,45 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Helper: decodifica JWT do Google sem verificação (apenas para dados do perfil) ──
+  const _decodeGoogleJwt = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      );
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
+
   // ── Login Google ───────────────────────────────────────────
   const loginGoogle = async (credential) => {
+    // ── Modo Demo: backend offline → usar dados do Google localmente ──
+    if (!backendOnline) {
+      const googleData = _decodeGoogleJwt(credential);
+      if (googleData) {
+        const demoUser = {
+          id: `google-${googleData.sub}`,
+          nome: googleData.name,
+          name: googleData.name,
+          email: googleData.email,
+          nivel_permissao: 'admin_demo',
+          role: 'admin_demo',
+          avatar: googleData.picture || null,
+        };
+        setUser(demoUser);
+        setEmpresa({ nome_empresa: 'Empresa Demo', status: 'trial' });
+        setModoDemo(true);
+        localStorage.setItem('zullya_auth', JSON.stringify(demoUser));
+        return { sucesso: true, demo: true };
+      }
+      return { sucesso: false, mensagem: 'Não foi possível ler os dados do Google. Tente o modo Demo.' };
+    }
+
+    // ── Backend online → fluxo normal ──
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api'}/auth/google`, {
         method: 'POST',
