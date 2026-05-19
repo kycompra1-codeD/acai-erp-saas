@@ -14,6 +14,9 @@ const { testConnection, connectRedis } = require('./db/connection');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Confia no proxy reverso (Nginx na VPS) para X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ============================================================
 // Middlewares de Segurança
 // ============================================================

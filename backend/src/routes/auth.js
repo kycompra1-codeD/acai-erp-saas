@@ -164,6 +164,9 @@ router.post('/login', [
     const usuario = rows[0];
 
     // Verificar senha
+    if (!usuario.senha_hash) {
+      return res.status(401).json({ sucesso: false, mensagem: 'Esta conta usa login com Google. Clique em "Entrar com Google".' });
+    }
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
     if (!senhaCorreta) {
       return res.status(401).json({ sucesso: false, mensagem: 'E-mail ou senha incorretos.' });
