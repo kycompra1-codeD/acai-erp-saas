@@ -377,8 +377,8 @@ router.patch('/tenants/:id/perfil', adminMiddleware, async (req, res) => {
 // PATCH /api/admin/usuarios/:id/credenciais — Admin atualiza email/senha de usuário
 // ============================================================
 router.patch('/usuarios/:id/credenciais', adminMiddleware, [
-  body('email').optional().isEmail().normalizeEmail(),
-  body('senha').optional().isLength({ min: 6 }),
+  body('email').optional({ values: 'falsy' }).isEmail().normalizeEmail(),
+  body('senha').optional({ values: 'falsy' }).isLength({ min: 6 }),
 ], async (req, res) => {
   const erros = validationResult(req);
   if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
@@ -451,14 +451,14 @@ router.post('/planos', adminMiddleware, [
   body('nome').notEmpty().trim(),
   body('descricao').optional().trim(),
   body('valor_mensal').isFloat({ min: 0 }),
-  body('valor_anual').optional({ nullable: true }).isFloat({ min: 0 }),
-  body('trial_dias').optional().isInt({ min: 0 }),
+  body('valor_anual').optional({ values: 'falsy' }).isFloat({ min: 0 }),
+  body('trial_dias').optional({ values: 'falsy' }).isInt({ min: 0 }),
   body('max_usuarios').isInt({ min: 1 }),
-  body('max_filiais').optional().isInt({ min: 1 }),
-  body('max_produtos').optional().isInt({ min: 1 }),
+  body('max_filiais').optional({ values: 'falsy' }).isInt({ min: 1 }),
+  body('max_produtos').optional({ values: 'falsy' }).isInt({ min: 1 }),
   body('modulos').isArray(),
-  body('ativo').optional().isBoolean(),
-  body('destaque').optional().isBoolean(),
+  body('ativo').optional({ values: 'falsy' }).isBoolean(),
+  body('destaque').optional({ values: 'falsy' }).isBoolean(),
 ], async (req, res) => {
   const erros = validationResult(req);
   if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
@@ -493,14 +493,14 @@ router.put('/planos/:id', adminMiddleware, [
   body('nome').notEmpty().trim(),
   body('descricao').optional({ nullable: true }).trim(),
   body('valor_mensal').isFloat({ min: 0 }),
-  body('valor_anual').optional({ nullable: true }).isFloat({ min: 0 }),
-  body('trial_dias').optional().isInt({ min: 0 }),
+  body('valor_anual').optional({ values: 'falsy' }).isFloat({ min: 0 }),
+  body('trial_dias').optional({ values: 'falsy' }).isInt({ min: 0 }),
   body('max_usuarios').isInt({ min: 1 }),
-  body('max_filiais').optional().isInt({ min: 1 }),
-  body('max_produtos').optional().isInt({ min: 1 }),
+  body('max_filiais').optional({ values: 'falsy' }).isInt({ min: 1 }),
+  body('max_produtos').optional({ values: 'falsy' }).isInt({ min: 1 }),
   body('modulos').isArray(),
-  body('ativo').optional().isBoolean(),
-  body('destaque').optional().isBoolean(),
+  body('ativo').optional({ values: 'falsy' }).isBoolean(),
+  body('destaque').optional({ values: 'falsy' }).isBoolean(),
 ], async (req, res) => {
   const erros = validationResult(req);
   if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
