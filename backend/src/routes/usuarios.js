@@ -10,6 +10,89 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // ============================================================
+// GET /api/usuarios/eu — Perfil do usuário logado
+// ============================================================
+router.get('/eu', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, nome, email, celular, nivel_permissao,
+              google_id IS NOT NULL AS usa_google, criado_em
+       FROM usuarios WHERE id = $1`,
+      [req.usuario.id]
+    );
+    if (!rows[0]) return res.status(404).json({ sucesso: false });
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// PATCH /api/usuarios/eu — Atualizar nome e celular próprios
+// ============================================================
+router.patch('/eu', [
+  body('nome').optional().trim().notEmpty().withMessage('Nome não pode ser vazio'),
+  body('celular').optional().trim(),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  const { nome, celular } = req.body;
+  const updates = [];
+  const values = [];
+
+  if (nome !== undefined) { values.push(nome); updates.push(`nome = $${values.length}`); }
+  if (celular !== undefined) { values.push(celular); updates.push(`celular = $${values.length}`); }
+
+  if (!updates.length) {
+    return res.status(400).json({ sucesso: false, mensagem: 'Nenhum campo para atualizar.' });
+  }
+
+  values.push(req.usuario.id);
+  try {
+    const { rows } = await query(
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = $${values.length}
+       RETURNING id, nome, email, celular`,
+      values
+    );
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro ao atualizar perfil.' });
+  }
+});
+
+// ============================================================
+// PATCH /api/usuarios/eu/senha — Alterar própria senha
+// ============================================================
+router.patch('/eu/senha', [
+  body('senha_atual').notEmpty().withMessage('Senha atual obrigatória'),
+  body('nova_senha').isLength({ min: 6 }).withMessage('Nova senha: mínimo 6 caracteres'),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  const { senha_atual, nova_senha } = req.body;
+  try {
+    const { rows } = await query(
+      'SELECT senha_hash FROM usuarios WHERE id = $1',
+      [req.usuario.id]
+    );
+    if (!rows[0]?.senha_hash) {
+      return res.status(400).json({ sucesso: false, mensagem: 'Sua conta usa login Google. Não é possível alterar senha aqui.' });
+    }
+    const ok = await bcrypt.compare(senha_atual, rows[0].senha_hash);
+    if (!ok) {
+      return res.status(401).json({ sucesso: false, mensagem: 'Senha atual incorreta.' });
+    }
+    const hash = await bcrypt.hash(nova_senha, 12);
+    await query('UPDATE usuarios SET senha_hash = $1 WHERE id = $2', [hash, req.usuario.id]);
+    return res.json({ sucesso: true, mensagem: 'Senha alterada com sucesso!' });
+  } catch (err) {
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro ao alterar senha.' });
+  }
+});
+
+// ============================================================
 // GET /api/usuarios - Listar usuários da empresa (multi-tenant)
 // ============================================================
 router.get('/', checkPermissao(['master', 'admin', 'gerente']), async (req, res) => {
