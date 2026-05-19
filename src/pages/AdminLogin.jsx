@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Loader2, Eye, EyeOff, AlertTriangle, Play } from 'lucide-react';
+import { Shield, Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackend } from '../services/api';
 
@@ -26,21 +26,15 @@ export default function AdminLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-
-
     try {
       const res = await fetch(`${API}/admin/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha }),
       });
-      
-      if (!res.ok) {
-        throw new Error('Falha no login');
-      }
 
       const data = await res.json();
+
       if (!data.sucesso) {
         toast.error(data.mensagem || 'Credenciais inválidas');
         return;
@@ -49,13 +43,11 @@ export default function AdminLogin() {
       localStorage.setItem('zullya_admin', JSON.stringify(data.dados.admin));
       navigate('/admin');
     } catch {
-      toast.error('Erro ao conectar com o servidor. Verifique se o backend na VPS está ativo.');
+      toast.error('Servidor indisponível. Verifique se a API na VPS está ativa.');
     } finally {
       setLoading(false);
     }
   };
-
-
 
   return (
     <div style={{
@@ -171,8 +163,6 @@ export default function AdminLogin() {
               'Entrar'
             )}
           </button>
-
-
         </form>
       </div>
       <style>{`
