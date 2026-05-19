@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  User, Building2, MapPin, Shield, CreditCard, Upload, Save, 
-  AlertCircle, Check, Zap, Crown, ShieldCheck, ArrowRight,
-  TrendingUp, Globe, Truck, Users as UsersIcon, FileText, 
-  Loader2, Clock
+import { useState, useEffect } from 'react';
+import {
+  User, Building2, MapPin, Shield, CreditCard, Upload, Save,
+  Check, Zap, Crown, ShieldCheck, ArrowRight, Loader2, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CheckoutModal from '../components/CheckoutModal';
@@ -13,9 +11,7 @@ const API = import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api';
 
 function authFetch(path) {
   const token = localStorage.getItem('zullya_access_token');
-  return fetch(`${API}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(r => r.json());
+  return fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
 }
 
 function PlanoIcon({ nome, size = 28 }) {
@@ -58,39 +54,57 @@ export default function MyAccount() {
   });
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    razaoSocial: empresa?.razao_social || 'Zullya Sistemas Ltda',
-    nomeFantasia: empresa?.nome_fantasia || 'Zullya ERP',
-    cnpj: empresa?.cnpj || '00.000.000/0001-00',
-    ie: empresa?.inscricao_estadual || 'Isento',
-    telefone: '(11) 3000-0000',
-    emailComercial: 'contato@zullya.com.br',
-    regimeTributario: 'Simples Nacional'
+    razaoSocial: '',
+    nomeFantasia: '',
+    cnpj: '',
+    ie: '',
+    telefone: '',
+    emailComercial: '',
+    regimeTributario: 'Simples Nacional',
   });
 
   const [endereco, setEndereco] = useState({
-    cep: '01001-000',
-    logradouro: 'Praça da Sé',
-    numero: '1',
-    complemento: 'Sala 101',
-    bairro: 'Sé',
-    cidade: 'São Paulo',
-    estado: 'SP'
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: 'SP',
   });
 
-  // Atualizar dados iniciais caso o usuário/empresa logue com sucesso
+  // Carregar perfil completo da empresa da API
   useEffect(() => {
-    if (user) {
-      setPerfil(p => ({ ...p, nome: user.name, email: user.email }));
-    }
-    if (empresa) {
-      setDadosEmpresa(e => ({
-        ...e,
-        razaoSocial: empresa.razao_social || e.razaoSocial,
-        nomeFantasia: empresa.nome_fantasia || e.nomeFantasia,
-        cnpj: empresa.cnpj || e.cnpj,
-      }));
-    }
-  }, [user, empresa]);
+    if (user) setPerfil(p => ({ ...p, nome: user.name, email: user.email }));
+
+    const token = localStorage.getItem('zullya_access_token');
+    if (!token) return;
+    fetch(`${API}/tenants/perfil`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(r => {
+        if (!r.sucesso) return;
+        const d = r.dados;
+        setDadosEmpresa({
+          razaoSocial:      d.razao_social      || '',
+          nomeFantasia:     d.nome_empresa       || '',
+          cnpj:             d.cnpj               || '',
+          ie:               d.inscricao_estadual || '',
+          telefone:         d.telefone           || '',
+          emailComercial:   d.email_comercial || d.email_contato || '',
+          regimeTributario: d.regime_tributario  || 'Simples Nacional',
+        });
+        setEndereco({
+          cep:         d.cep         || '',
+          logradouro:  d.logradouro  || '',
+          numero:      d.numero      || '',
+          complemento: d.complemento || '',
+          bairro:      d.bairro      || '',
+          cidade:      d.cidade      || '',
+          estado:      d.estado      || 'SP',
+        });
+      })
+      .catch(() => {});
+  }, [user]);
 
   // Verificar retorno do Mercado Pago / Checkout
   useEffect(() => {
@@ -134,13 +148,52 @@ export default function MyAccount() {
     carregar();
   }, []);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('zullya_access_token');
+      let payload = {};
+      if (activeTab === 'perfil') {
+        // TODO: endpoint de perfil de usuário (nome, celular, senha)
+        toast.success('Perfil atualizado!');
+        return;
+      }
+      if (activeTab === 'empresa') {
+        payload = {
+          nome_empresa:       dadosEmpresa.nomeFantasia,
+          razao_social:       dadosEmpresa.razaoSocial,
+          cnpj:               dadosEmpresa.cnpj,
+          inscricao_estadual: dadosEmpresa.ie,
+          regime_tributario:  dadosEmpresa.regimeTributario,
+          telefone:           dadosEmpresa.telefone,
+          email_comercial:    dadosEmpresa.emailComercial,
+        };
+      }
+      if (activeTab === 'endereco') {
+        payload = {
+          cep:         endereco.cep,
+          logradouro:  endereco.logradouro,
+          numero:      endereco.numero,
+          complemento: endereco.complemento,
+          bairro:      endereco.bairro,
+          cidade:      endereco.cidade,
+          estado:      endereco.estado,
+        };
+      }
+      const res = await fetch(`${API}/tenants/perfil`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.sucesso) toast.success('Dados atualizados com sucesso!');
+      else toast.error(data.mensagem || 'Erro ao salvar');
+    } catch {
+      toast.error('Erro ao conectar com o servidor');
+    } finally {
       setIsLoading(false);
-      toast.success('Dados atualizados com sucesso!');
-    }, 1000);
+    }
   };
 
   const handleUpgrade = (plan) => {

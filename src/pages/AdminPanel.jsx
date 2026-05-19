@@ -5,7 +5,7 @@ import {
   LogOut, Search, RefreshCw, ChevronDown, X, Save,
   Gift, Ban, Edit3, BarChart2, Package, Plus, Trash2,
   Check, Star, ToggleLeft, ToggleRight, AlertTriangle, ShieldCheck,
-  Building2, Phone, CreditCard, Activity, Mail, Hash
+  Building2, Phone, CreditCard, Activity, Mail, Hash, MapPin
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackend } from '../services/api';
@@ -246,14 +246,57 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
   const [motivo, setMotivo] = useState(base.motivo_bloqueio || '');
   const [saving, setSaving] = useState(false);
 
+  // Dados cadastrais editáveis pelo admin
+  const [empresa, setEmpresa] = useState({
+    nome_empresa: base.nome_empresa || '', razao_social: '', cnpj: base.cnpj || '',
+    inscricao_estadual: '', regime_tributario: 'Simples Nacional',
+    telefone: base.telefone || '', email_contato: base.email_contato || '', email_comercial: '',
+    cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+  });
+  const [savingEmpresa, setSavingEmpresa] = useState(false);
+
   useEffect(() => {
     if (modoDemo) { setDetalhe(base); setCarregando(false); return; }
     setCarregando(true);
     adminFetch(`/tenants/${base.id}`)
-      .then(r => { if (r.sucesso) setDetalhe(r.dados); })
+      .then(r => {
+        if (r.sucesso) {
+          setDetalhe(r.dados);
+          const d = r.dados;
+          setEmpresa({
+            nome_empresa:       d.nome_empresa       || '',
+            razao_social:       d.razao_social        || '',
+            cnpj:               d.cnpj               || '',
+            inscricao_estadual: d.inscricao_estadual  || '',
+            regime_tributario:  d.regime_tributario   || 'Simples Nacional',
+            telefone:           d.telefone            || '',
+            email_contato:      d.email_contato       || '',
+            email_comercial:    d.email_comercial     || '',
+            cep:                d.cep                 || '',
+            logradouro:         d.logradouro          || '',
+            numero:             d.numero              || '',
+            complemento:        d.complemento         || '',
+            bairro:             d.bairro              || '',
+            cidade:             d.cidade              || '',
+            estado:             d.estado              || '',
+          });
+        }
+      })
       .catch(() => {})
       .finally(() => setCarregando(false));
   }, [base.id, modoDemo]);
+
+  const saveEmpresa = async () => {
+    setSavingEmpresa(true);
+    try {
+      const r = await adminFetch(`/tenants/${base.id}/perfil`, {
+        method: 'PATCH', body: JSON.stringify(empresa),
+      });
+      if (r.sucesso) toast.success('Dados da empresa atualizados!');
+      else toast.error(r.mensagem || 'Erro ao salvar');
+    } catch { toast.error('Erro ao salvar'); }
+    finally { setSavingEmpresa(false); }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -284,10 +327,11 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
   const valorPago = planoAtual ? planoAtual.valor_mensal * (1 - (parseFloat(desconto) || 0) / 100) : 0;
 
   const ABAS = [
-    { id: 'geral',     label: 'Visão Geral',  icon: Building2 },
-    { id: 'config',    label: 'Configurações', icon: ShieldCheck },
-    { id: 'usuarios',  label: `Usuários${detalhe?.usuarios ? ` (${detalhe.usuarios.length})` : ''}`, icon: Users },
-    { id: 'atividade', label: 'Atividade',    icon: Activity },
+    { id: 'geral',    label: 'Visão Geral',      icon: Building2 },
+    { id: 'config',   label: 'Configurações',    icon: ShieldCheck },
+    { id: 'cadastro', label: 'Dados da Empresa', icon: MapPin },
+    { id: 'usuarios', label: `Usuários${detalhe?.usuarios ? ` (${detalhe.usuarios.length})` : ''}`, icon: Users },
+    { id: 'atividade',label: 'Atividade',        icon: Activity },
   ];
 
   const InfoRow = ({ label, value, color }) => (
@@ -468,6 +512,115 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
               </button>
             </div>
           )}
+
+          {/* ━━ ABA: Dados da Empresa ━━ */}
+          {abaAtiva === 'cadastro' && (
+            carregando ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Carregando dados...</div> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+
+              {/* Dados Fiscais */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <Building2 size={14} color="#7c3aed" />
+                  <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Dados Fiscais</p>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div>
+                    <label style={labelStyle}>Nome Fantasia</label>
+                    <input value={empresa.nome_empresa} onChange={e => setEmpresa(p=>({...p, nome_empresa: e.target.value}))} style={inputStyle} placeholder="Nome Fantasia" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Razão Social</label>
+                    <input value={empresa.razao_social} onChange={e => setEmpresa(p=>({...p, razao_social: e.target.value}))} style={inputStyle} placeholder="Razão Social Ltda" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>CNPJ</label>
+                    <input value={empresa.cnpj} onChange={e => setEmpresa(p=>({...p, cnpj: e.target.value}))} style={inputStyle} placeholder="00.000.000/0001-00" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Inscrição Estadual</label>
+                    <input value={empresa.inscricao_estadual} onChange={e => setEmpresa(p=>({...p, inscricao_estadual: e.target.value}))} style={inputStyle} placeholder="Isento" />
+                  </div>
+                  <div style={{ gridColumn:'1/-1' }}>
+                    <label style={labelStyle}>Regime Tributário</label>
+                    <select value={empresa.regime_tributario} onChange={e => setEmpresa(p=>({...p, regime_tributario: e.target.value}))} style={inputStyle}>
+                      <option value="Simples Nacional">Simples Nacional</option>
+                      <option value="Lucro Presumido">Lucro Presumido</option>
+                      <option value="Lucro Real">Lucro Real</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <Phone size={14} color="#3b82f6" />
+                  <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Contato</p>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div>
+                    <label style={labelStyle}>Telefone Comercial</label>
+                    <input value={empresa.telefone} onChange={e => setEmpresa(p=>({...p, telefone: e.target.value}))} style={inputStyle} placeholder="(11) 3000-0000" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>E-mail de Contato</label>
+                    <input type="email" value={empresa.email_contato} onChange={e => setEmpresa(p=>({...p, email_contato: e.target.value}))} style={inputStyle} placeholder="contato@empresa.com" />
+                  </div>
+                  <div style={{ gridColumn:'1/-1' }}>
+                    <label style={labelStyle}>E-mail Comercial</label>
+                    <input type="email" value={empresa.email_comercial} onChange={e => setEmpresa(p=>({...p, email_comercial: e.target.value}))} style={inputStyle} placeholder="comercial@empresa.com" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <MapPin size={14} color="#10b981" />
+                  <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Endereço</p>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:12 }}>
+                  <div>
+                    <label style={labelStyle}>CEP</label>
+                    <input value={empresa.cep} onChange={e => setEmpresa(p=>({...p, cep: e.target.value}))} style={inputStyle} placeholder="00000-000" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Logradouro</label>
+                    <input value={empresa.logradouro} onChange={e => setEmpresa(p=>({...p, logradouro: e.target.value}))} style={inputStyle} placeholder="Rua / Avenida" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Número</label>
+                    <input value={empresa.numero} onChange={e => setEmpresa(p=>({...p, numero: e.target.value}))} style={inputStyle} placeholder="123" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Complemento</label>
+                    <input value={empresa.complemento} onChange={e => setEmpresa(p=>({...p, complemento: e.target.value}))} style={inputStyle} placeholder="Sala 10" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Bairro</label>
+                    <input value={empresa.bairro} onChange={e => setEmpresa(p=>({...p, bairro: e.target.value}))} style={inputStyle} placeholder="Centro" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Cidade</label>
+                    <input value={empresa.cidade} onChange={e => setEmpresa(p=>({...p, cidade: e.target.value}))} style={inputStyle} placeholder="São Paulo" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Estado (UF)</label>
+                    <select value={empresa.estado} onChange={e => setEmpresa(p=>({...p, estado: e.target.value}))} style={inputStyle}>
+                      {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                        <option key={uf} value={uf}>{uf}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={saveEmpresa} disabled={savingEmpresa} style={{ padding:'12px 0', background: savingEmpresa ? '#4b5563' : 'linear-gradient(135deg,#7c3aed,#db2777)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor: savingEmpresa ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <Save size={16} />{savingEmpresa ? 'Salvando...' : 'Salvar Dados da Empresa'}
+              </button>
+            </div>
+          ))}
 
           {/* ━━ ABA: Usuários ━━ */}
           {abaAtiva === 'usuarios' && (

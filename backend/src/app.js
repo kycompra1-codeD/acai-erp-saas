@@ -89,6 +89,7 @@ const crmRoutes = require('./routes/crm');
 const fiscalRoutes = require('./routes/fiscal');
 const biRoutes = require('./routes/bi');
 const automacoesRoutes = require('./routes/automacoes');
+const tenantsRoutes = require('./routes/tenants');
 
 // Health check (ambos os paths por compatibilidade)
 const healthHandler = (req, res) => {
@@ -123,6 +124,7 @@ app.use('/api/fiscal', fiscalRoutes);
 app.use('/api/bi', biRoutes);
 app.use('/api/relatorios/bi', biRoutes);
 app.use('/api/automacoes', automacoesRoutes);
+app.use('/api/tenants', tenantsRoutes);
 
 // ============================================================
 // Rota 404

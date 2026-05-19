@@ -313,6 +313,42 @@ router.patch('/tenants/:id/notas', adminMiddleware, [
 });
 
 // ============================================================
+// PATCH /api/admin/tenants/:id/perfil — Admin edita dados cadastrais
+// ============================================================
+const CAMPOS_PERFIL_TENANT = [
+  'nome_empresa', 'razao_social', 'cnpj', 'inscricao_estadual',
+  'regime_tributario', 'telefone', 'email_contato', 'email_comercial',
+  'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado',
+];
+router.patch('/tenants/:id/perfil', adminMiddleware, async (req, res) => {
+  const updates = [];
+  const values = [];
+  CAMPOS_PERFIL_TENANT.forEach(campo => {
+    if (req.body[campo] !== undefined) {
+      values.push(req.body[campo]);
+      updates.push(`${campo} = $${values.length}`);
+    }
+  });
+  if (updates.length === 0) {
+    return res.status(400).json({ sucesso: false, mensagem: 'Nenhum campo para atualizar.' });
+  }
+  values.push(new Date());
+  updates.push(`atualizado_em = $${values.length}`);
+  values.push(req.params.id);
+  try {
+    const { rows } = await query(
+      `UPDATE tenants SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING *`,
+      values
+    );
+    if (rows.length === 0) return res.status(404).json({ sucesso: false, mensagem: 'Não encontrado.' });
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ Admin perfil empresa:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
 // GET /api/admin/planos — Listar todos os planos (admin)
 // ============================================================
 router.get('/planos', adminMiddleware, async (req, res) => {
