@@ -38,20 +38,20 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate Limiting: máximo de 100 requisições por 15 minutos por IP
+// Rate Limiting geral: 500 req / 15 min por IP (proteção básica contra bots)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { sucesso: false, mensagem: 'Muitas requisições. Tente novamente em 15 minutos.' },
 });
 app.use(limiter);
 
-// Rate limit para rotas de auth
-const authLimiter = rateLimit({
+// Rate limit específico para login/registro/google: 30 tentativas / 15 min por IP
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 30,
   message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos.' },
 });
 
@@ -104,7 +104,11 @@ const healthHandler = (req, res) => {
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
-app.use('/api/auth', authLimiter, authRoutes);
+// Login limiter aplicado apenas nos endpoints sensíveis (não em refresh/me/logout)
+app.post('/api/auth/login', loginLimiter);
+app.post('/api/auth/registro', loginLimiter);
+app.post('/api/auth/google', loginLimiter);
+app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/produtos', produtosRoutes);
