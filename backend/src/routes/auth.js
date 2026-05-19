@@ -477,8 +477,15 @@ router.post('/google', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('❌ Erro no login Google:', err);
-    return res.status(401).json({ sucesso: false, mensagem: 'Token Google inválido.' });
+    console.error('❌ Erro no login Google:', err.message);
+    const msg = err.message?.includes('Token used too late') || err.message?.includes('expired')
+      ? 'Sessão Google expirada. Clique novamente no botão "Entrar com Google".'
+      : err.message?.includes('audience') || err.message?.includes('Wrong recipient')
+      ? 'Erro de configuração Google. Contate o suporte.'
+      : err.message?.includes('Wrong number of segments') || err.message?.includes('invalid')
+      ? 'Token Google inválido. Clique novamente no botão "Entrar com Google".'
+      : 'Erro ao verificar conta Google. Tente novamente.';
+    return res.status(401).json({ sucesso: false, mensagem: msg });
   }
 });
 

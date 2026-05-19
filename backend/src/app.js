@@ -38,21 +38,38 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate Limiting geral: 500 req / 15 min por IP (proteção básica contra bots)
+// Rate Limiting geral: 1000 req / 15 min por IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { sucesso: false, mensagem: 'Muitas requisições. Tente novamente em 15 minutos.' },
 });
 app.use(limiter);
 
-// Rate limit específico para login/registro/google: 30 tentativas / 15 min por IP
+// Rate limit para login email/senha: máx 30 falhas / 15 min (sucessos não contam)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skipSuccessfulRequests: true,
   message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos.' },
+});
+
+// Rate limit para Google OAuth: máx 60 por 15 min (sucessos não contam)
+const googleLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  skipSuccessfulRequests: true,
+  message: { sucesso: false, mensagem: 'Muitas tentativas. Aguarde 15 minutos.' },
+});
+
+// Rate limit para registro: máx 20 por hora
+const registroLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  skipSuccessfulRequests: true,
+  message: { sucesso: false, mensagem: 'Muitos cadastros. Tente novamente em 1 hora.' },
 });
 
 // ============================================================
@@ -104,10 +121,10 @@ const healthHandler = (req, res) => {
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
-// Login limiter aplicado apenas nos endpoints sensíveis (não em refresh/me/logout)
 app.post('/api/auth/login', loginLimiter);
-app.post('/api/auth/registro', loginLimiter);
-app.post('/api/auth/google', loginLimiter);
+app.post('/api/auth/google', googleLimiter);
+app.post('/api/auth/registro', registroLimiter);
+app.post('/api/auth/registro-google', registroLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/webhooks', webhookRoutes);
