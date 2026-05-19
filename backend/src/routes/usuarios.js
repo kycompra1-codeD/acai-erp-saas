@@ -31,7 +31,7 @@ router.get('/eu', async (req, res) => {
 // PATCH /api/usuarios/eu — Atualizar nome e celular próprios
 // ============================================================
 router.patch('/eu', [
-  body('nome').optional().trim().notEmpty().withMessage('Nome não pode ser vazio'),
+  body('nome').optional({ values: 'falsy' }).trim(),
   body('celular').optional().trim(),
 ], async (req, res) => {
   const erros = validationResult(req);

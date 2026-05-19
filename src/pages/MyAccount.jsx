@@ -156,8 +156,8 @@ export default function MyAccount() {
         body: JSON.stringify({ nome: perfil.nome, celular: perfil.celular }),
       });
       if (r.sucesso) toast.success('Perfil atualizado!');
-      else toast.error(r.mensagem || 'Erro ao salvar');
-    } catch { toast.error('Erro ao conectar'); }
+      else toast.error(r.mensagem || r.erros?.[0]?.msg || 'Erro ao salvar');
+    } catch { toast.error('Erro ao conectar com o servidor'); }
     finally { setSavingPerfil(false); }
   };
 
@@ -210,8 +210,11 @@ export default function MyAccount() {
         }),
       });
       if (r.sucesso) toast.success('Dados da empresa salvos!');
-      else toast.error(r.mensagem || 'Erro ao salvar');
-    } catch { toast.error('Erro ao conectar'); }
+      else {
+        const msg = r.mensagem || (r.erros?.[0]?.msg) || 'Erro ao salvar';
+        toast.error(msg);
+      }
+    } catch { toast.error('Erro ao conectar com o servidor'); }
     finally { setSavingEmpresa(false); }
   };
 

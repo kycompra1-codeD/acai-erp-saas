@@ -36,7 +36,7 @@ router.get('/perfil', authMiddleware, async (req, res) => {
 
 // PATCH /api/tenants/perfil
 router.patch('/perfil', authMiddleware, [
-  body('nome_empresa').optional().trim().notEmpty(),
+  body('nome_empresa').optional({ values: 'falsy' }).trim(),
   body('razao_social').optional().trim(),
   body('cnpj').optional().trim(),
   body('inscricao_estadual').optional().trim(),
