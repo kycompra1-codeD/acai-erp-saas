@@ -200,29 +200,19 @@ export default function MyAccount() {
           responsavel_nome:    dadosEmpresa.responsavelNome,
           responsavel_email:   dadosEmpresa.responsavelEmail,
           responsavel_celular: dadosEmpresa.responsavelCelular,
+          cep:                 endereco.cep,
+          logradouro:          endereco.logradouro,
+          numero:              endereco.numero,
+          complemento:         endereco.complemento,
+          bairro:              endereco.bairro,
+          cidade:              endereco.cidade,
+          estado:              endereco.estado,
         }),
       });
       if (r.sucesso) toast.success('Dados da empresa salvos!');
       else toast.error(r.mensagem || 'Erro ao salvar');
     } catch { toast.error('Erro ao conectar'); }
     finally { setSavingEmpresa(false); }
-  };
-
-  const handleSalvarEndereco = async () => {
-    setSavingEnd(true);
-    try {
-      const r = await authFetch('/tenants/perfil', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          cep: endereco.cep, logradouro: endereco.logradouro, numero: endereco.numero,
-          complemento: endereco.complemento, bairro: endereco.bairro,
-          cidade: endereco.cidade, estado: endereco.estado,
-        }),
-      });
-      if (r.sucesso) toast.success('Endereço salvo!');
-      else toast.error(r.mensagem || 'Erro ao salvar');
-    } catch { toast.error('Erro ao conectar'); }
-    finally { setSavingEnd(false); }
   };
 
   const tenantStatus = empresa?.status || user?.empresa?.status || 'trial';
@@ -235,7 +225,6 @@ export default function MyAccount() {
   const tabs = [
     { id: 'perfil',     label: 'Meu Perfil',          icon: User },
     { id: 'empresa',    label: 'Dados da Empresa',     icon: Building2 },
-    { id: 'endereco',   label: 'Endereço',             icon: MapPin },
     { id: 'certificado',label: 'Certificado Digital',  icon: Shield },
     { id: 'assinatura', label: 'Assinatura e Planos',  icon: CreditCard },
   ];
@@ -503,29 +492,16 @@ export default function MyAccount() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-primary" onClick={handleSalvarEmpresa} disabled={savingEmpresa}>
-                  {savingEmpresa ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                  {savingEmpresa ? 'Salvando...' : 'Salvar Dados da Empresa'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ━━ Endereço ━━ */}
-          {activeTab === 'endereco' && (
-            <div className="card animation-fade-in" style={{ padding: 28 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-                <MapPin size={18} color="var(--primary)" /> Endereço da Sede
-              </h2>
-
+              {/* Endereço (Movido para cá) */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginTop: 8 }}>Endereço</p>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 120px', gap: 16, marginBottom: 16 }}>
                 <div className="form-group">
                   <label>CEP</label>
                   <input className="input" value={endereco.cep} onChange={e => setEndereco(d => ({ ...d, cep: e.target.value }))} placeholder="00000-000" />
                 </div>
                 <div className="form-group">
-                  <label>Logradouro (Rua / Avenida)</label>
+                  <label>Logradouro</label>
                   <input className="input" value={endereco.logradouro} onChange={e => setEndereco(d => ({ ...d, logradouro: e.target.value }))} />
                 </div>
                 <div className="form-group">
@@ -558,10 +534,15 @@ export default function MyAccount() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-primary" onClick={handleSalvarEndereco} disabled={savingEnd}>
-                  {savingEnd ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                  {savingEnd ? 'Salvando...' : 'Salvar Endereço'}
+              <div style={{ marginTop: 32 }}>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleSalvarEmpresa} 
+                  disabled={savingEmpresa}
+                  style={{ width: '100%', padding: '14px', fontSize: '15px' }}
+                >
+                  {savingEmpresa ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  {savingEmpresa ? 'Salvando...' : 'Salvar Dados da Empresa'}
                 </button>
               </div>
             </div>

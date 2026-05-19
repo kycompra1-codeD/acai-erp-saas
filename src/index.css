@@ -346,7 +346,8 @@ img {
    INPUTS
    ============================================ */
 
-.input-field {
+.input-field,
+.input {
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -365,13 +366,17 @@ img {
 .input-field::placeholder { color: var(--text-muted); }
 
 select.input-field,
-.input-field select {
+.input-field select,
+select.input,
+.input select {
   background: transparent;
   color: var(--text);
 }
 
 select.input-field option,
 .input-field option,
+select.input option,
+.input option,
 select option {
   background-color: var(--bg-2);
   color: var(--text);
