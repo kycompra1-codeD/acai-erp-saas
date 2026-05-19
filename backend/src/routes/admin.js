@@ -203,6 +203,29 @@ router.get('/tenants/:id', adminMiddleware, async (req, res) => {
 });
 
 // ============================================================
+// PATCH /api/admin/tenants/:id/modulos — Override de módulos
+// ============================================================
+router.patch('/tenants/:id/modulos', adminMiddleware, [
+  body('modulos').isArray(),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  try {
+    const { rows } = await query(
+      `UPDATE tenants SET modulos_override = $1, atualizado_em = NOW()
+       WHERE id = $2 RETURNING id, nome_empresa, modulos_override`,
+      [JSON.stringify(req.body.modulos), req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ sucesso: false, mensagem: 'Não encontrado.' });
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ Admin modulos:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
 // PATCH /api/admin/tenants/:id/status — Alterar status
 // ============================================================
 router.patch('/tenants/:id/status', adminMiddleware, [

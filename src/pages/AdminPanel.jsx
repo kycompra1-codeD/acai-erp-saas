@@ -255,6 +255,10 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
   });
   const [savingEmpresa, setSavingEmpresa] = useState(false);
 
+  // Módulos override por cliente
+  const [modulosAtivos, setModulosAtivos] = useState(null); // null = carregando
+  const [savingModulos, setSavingModulos] = useState(false);
+
   useEffect(() => {
     if (modoDemo) { setDetalhe(base); setCarregando(false); return; }
     setCarregando(true);
@@ -280,6 +284,16 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
             cidade:             d.cidade              || '',
             estado:             d.estado              || '',
           });
+          // Módulos: usa override se existir, senão usa módulos do plano
+          const override = d.modulos_override;
+          if (Array.isArray(override)) {
+            setModulosAtivos(override);
+          } else if (typeof override === 'string') {
+            try { setModulosAtivos(JSON.parse(override)); } catch { setModulosAtivos([]); }
+          } else {
+            // Sem override: pré-selecionar módulos do plano atual
+            setModulosAtivos(null);
+          }
         }
       })
       .catch(() => {})
@@ -296,6 +310,19 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
       else toast.error(r.mensagem || 'Erro ao salvar');
     } catch { toast.error('Erro ao salvar'); }
     finally { setSavingEmpresa(false); }
+  };
+
+  const saveModulos = async () => {
+    const lista = modulosAtivos ?? planoAtualModulos;
+    setSavingModulos(true);
+    try {
+      const r = await adminFetch(`/tenants/${base.id}/modulos`, {
+        method: 'PATCH', body: JSON.stringify({ modulos: lista }),
+      });
+      if (r.sucesso) toast.success('Módulos do cliente atualizados!');
+      else toast.error(r.mensagem || 'Erro ao salvar');
+    } catch { toast.error('Erro ao salvar módulos'); }
+    finally { setSavingModulos(false); }
   };
 
   const save = async () => {
@@ -326,10 +353,26 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
   const planoAtual = planos.find(p => p.id === (detalhe?.plano_id || base.plano_id));
   const valorPago = planoAtual ? planoAtual.valor_mensal * (1 - (parseFloat(desconto) || 0) / 100) : 0;
 
+  const planoAtualModulos = (() => {
+    const m = planoAtual?.modulos;
+    if (Array.isArray(m)) return m;
+    if (typeof m === 'string') { try { return JSON.parse(m); } catch { return []; } }
+    return [];
+  })();
+
+  // Lista efetiva de módulos: override do cliente se existir, senão do plano
+  const modulosEfetivos = modulosAtivos !== null ? modulosAtivos : planoAtualModulos;
+
+  const toggleModuloCliente = (id) => {
+    const base2 = modulosAtivos !== null ? modulosAtivos : planoAtualModulos;
+    setModulosAtivos(base2.includes(id) ? base2.filter(m => m !== id) : [...base2, id]);
+  };
+
   const ABAS = [
     { id: 'geral',    label: 'Visão Geral',      icon: Building2 },
     { id: 'config',   label: 'Configurações',    icon: ShieldCheck },
     { id: 'cadastro', label: 'Dados da Empresa', icon: MapPin },
+    { id: 'modulos',  label: `Módulos (${modulosEfetivos.length}/${MODULOS_LISTA.length})`, icon: Package },
     { id: 'usuarios', label: `Usuários${detalhe?.usuarios ? ` (${detalhe.usuarios.length})` : ''}`, icon: Users },
     { id: 'atividade',label: 'Atividade',        icon: Activity },
   ];
@@ -641,6 +684,82 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
 
               <button onClick={saveEmpresa} disabled={savingEmpresa} style={{ padding:'12px 0', background: savingEmpresa ? '#4b5563' : 'linear-gradient(135deg,#7c3aed,#db2777)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor: savingEmpresa ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
                 <Save size={16} />{savingEmpresa ? 'Salvando...' : 'Salvar Dados da Empresa'}
+              </button>
+            </div>
+          ))}
+
+          {/* ━━ ABA: Módulos ━━ */}
+          {abaAtiva === 'modulos' && (
+            carregando ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Carregando...</div> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <p style={{ color:'#e5e7eb', fontSize:14, fontWeight:700 }}>
+                    Módulos ativos — {modulosEfetivos.length}/{MODULOS_LISTA.length}
+                  </p>
+                  <p style={{ color:'#6b7280', fontSize:12, marginTop:2 }}>
+                    {modulosAtivos !== null
+                      ? 'Override individual aplicado — ignora o plano'
+                      : `Usando módulos do plano ${planoAtual?.nome || ''}`}
+                  </p>
+                </div>
+                {modulosAtivos !== null && (
+                  <button
+                    onClick={() => setModulosAtivos(null)}
+                    style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:6, padding:'4px 12px', color:'#ef4444', fontSize:11, fontWeight:700, cursor:'pointer' }}
+                  >
+                    Resetar para plano
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {MODULOS_LISTA.map(({ id, label }) => {
+                  const ativo = modulosEfetivos.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => toggleModuloCliente(id)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:10,
+                        padding:'10px 14px',
+                        background: ativo ? 'rgba(124,58,237,0.12)' : '#0f0f10',
+                        border: `1px solid ${ativo ? 'rgba(124,58,237,0.4)' : '#2d2d35'}`,
+                        borderRadius:8, cursor:'pointer', textAlign:'left', transition:'all 0.15s',
+                      }}
+                    >
+                      <div style={{
+                        width:18, height:18, borderRadius:4, flexShrink:0,
+                        background: ativo ? '#7c3aed' : 'transparent',
+                        border: `2px solid ${ativo ? '#7c3aed' : '#4b5563'}`,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                      }}>
+                        {ativo && <Check size={11} color="#fff" />}
+                      </div>
+                      <span style={{ color: ativo ? '#e9d5ff' : '#6b7280', fontSize:12, fontWeight: ativo ? 600 : 400 }}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                <button onClick={() => setModulosAtivos(MODULOS_LISTA.map(m => m.id))} style={{ background:'none', border:'none', color:'#7c3aed', fontSize:12, fontWeight:700, cursor:'pointer', padding:0 }}>
+                  Selecionar todos
+                </button>
+                <span style={{ color:'#374151' }}>·</span>
+                <button onClick={() => setModulosAtivos([])} style={{ background:'none', border:'none', color:'#6b7280', fontSize:12, fontWeight:700, cursor:'pointer', padding:0 }}>
+                  Limpar
+                </button>
+              </div>
+
+              <button
+                onClick={saveModulos}
+                disabled={savingModulos}
+                style={{ padding:'12px 0', background: savingModulos ? '#4b5563' : 'linear-gradient(135deg,#7c3aed,#db2777)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor: savingModulos ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+              >
+                <Save size={16} />{savingModulos ? 'Salvando...' : 'Salvar Módulos'}
               </button>
             </div>
           ))}

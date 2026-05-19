@@ -41,6 +41,17 @@ RUN printf "server { \n\
         index index.html index.htm; \n\
         try_files \$uri \$uri/ /index.html; \n\
     } \n\
+    location ~* \\.html\$ { \n\
+        root /usr/share/nginx/html; \n\
+        try_files \$uri /index.html; \n\
+        add_header Cache-Control \"no-store, no-cache, must-revalidate\"; \n\
+        add_header Pragma \"no-cache\"; \n\
+        expires 0; \n\
+    } \n\
+    location /assets/ { \n\
+        root /usr/share/nginx/html; \n\
+        add_header Cache-Control \"public, max-age=31536000, immutable\"; \n\
+    } \n\
     error_page 500 502 503 504 /50x.html; \n\
     location = /50x.html { \n\
         root /usr/share/nginx/html; \n\
