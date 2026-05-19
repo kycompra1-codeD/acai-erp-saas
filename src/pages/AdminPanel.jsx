@@ -4,7 +4,8 @@ import {
   Users, TrendingUp, AlertCircle, CheckCircle, Clock,
   LogOut, Search, RefreshCw, ChevronDown, X, Save,
   Gift, Ban, Edit3, BarChart2, Package, Plus, Trash2,
-  Check, Star, ToggleLeft, ToggleRight, AlertTriangle, ShieldCheck
+  Check, Star, ToggleLeft, ToggleRight, AlertTriangle, ShieldCheck,
+  Building2, Phone, CreditCard, Activity, Mail, Hash
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackend } from '../services/api';
@@ -228,136 +229,339 @@ function StatCard({ icon: Icon, label, value, color }) {
   );
 }
 
-// ── Modal de edição de cliente ───────────────────────────────
-function ClienteModal({ tenant, planos, onClose, onSave, modoDemo }) {
-  const [status, setStatus] = useState(tenant.status);
-  const [planoId, setPlanoId] = useState(tenant.plano_id || '');
-  const [desconto, setDesconto] = useState(tenant.desconto_percentual || 0);
-  const [gratuito, setGratuito] = useState(tenant.acesso_gratuito || false);
-  const [notas, setNotas] = useState(tenant.notas_internas || '');
-  const [motivo, setMotivo] = useState('');
+const NIVEL_LABEL = { master:'Master', admin:'Admin', gerente:'Gerente', vendedor:'Vendedor', caixa:'Caixa', estoque:'Estoque', financeiro:'Financeiro', operador:'Operador' };
+const NIVEL_COLOR = { master:'#7c3aed', admin:'#3b82f6', gerente:'#10b981', vendedor:'#f59e0b', caixa:'#ec4899', estoque:'#6b7280', financeiro:'#14b8a6', operador:'#9ca3af' };
+
+// ── Modal de cliente expandido — 4 abas ──────────────────────
+function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
+  const [abaAtiva, setAbaAtiva] = useState('geral');
+  const [detalhe, setDetalhe] = useState(null);
+  const [carregando, setCarregando] = useState(!modoDemo);
+
+  const [status, setStatus] = useState(base.status);
+  const [planoId, setPlanoId] = useState(base.plano_id || '');
+  const [desconto, setDesconto] = useState(base.desconto_percentual || 0);
+  const [gratuito, setGratuito] = useState(base.acesso_gratuito || false);
+  const [notas, setNotas] = useState(base.notas_internas || '');
+  const [motivo, setMotivo] = useState(base.motivo_bloqueio || '');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (modoDemo) { setDetalhe(base); setCarregando(false); return; }
+    setCarregando(true);
+    adminFetch(`/tenants/${base.id}`)
+      .then(r => { if (r.sucesso) setDetalhe(r.dados); })
+      .catch(() => {})
+      .finally(() => setCarregando(false));
+  }, [base.id, modoDemo]);
 
   const save = async () => {
     setSaving(true);
-    
-    // Modo Demo: Alterações salvas localmente
     if (modoDemo) {
       setTimeout(() => {
-        const planoEscolhido = planos.find(p => p.id === planoId);
-        const atualizado = {
-          ...tenant,
-          status,
-          plano_id: planoId,
-          plano_name: planoEscolhido ? planoEscolhido.nome : 'Sem plano',
-          desconto_percentual: parseFloat(desconto),
-          acesso_gratuito: gratuito,
-          notas_internas: notas
-        };
-        onSave(atualizado);
+        const p = planos.find(x => x.id === planoId);
+        onSave({ ...base, status, plano_id: planoId, plano_nome: p?.nome, desconto_percentual: parseFloat(desconto), acesso_gratuito: gratuito, notas_internas: notas });
         toast.success('Cliente atualizado no Modo Demo!');
-        setSaving(false);
-        onClose();
+        setSaving(false); onClose();
       }, 500);
       return;
     }
-
     try {
       await Promise.all([
-        adminFetch(`/tenants/${tenant.id}/status`, { method: 'PATCH', body: JSON.stringify({ status, motivo }) }),
-        planoId && adminFetch(`/tenants/${tenant.id}/plano`, { method: 'PATCH', body: JSON.stringify({ plano_id: planoId }) }),
-        adminFetch(`/tenants/${tenant.id}/desconto`, { method: 'PATCH', body: JSON.stringify({ desconto_percentual: parseFloat(desconto) }) }),
-        adminFetch(`/tenants/${tenant.id}/acesso-gratuito`, { method: 'PATCH', body: JSON.stringify({ acesso_gratuito: gratuito }) }),
-        adminFetch(`/tenants/${tenant.id}/notas`, { method: 'PATCH', body: JSON.stringify({ notas_internas: notas }) }),
+        adminFetch(`/tenants/${base.id}/status`,        { method: 'PATCH', body: JSON.stringify({ status, motivo }) }),
+        planoId && adminFetch(`/tenants/${base.id}/plano`, { method: 'PATCH', body: JSON.stringify({ plano_id: planoId }) }),
+        adminFetch(`/tenants/${base.id}/desconto`,      { method: 'PATCH', body: JSON.stringify({ desconto_percentual: parseFloat(desconto) }) }),
+        adminFetch(`/tenants/${base.id}/acesso-gratuito`, { method: 'PATCH', body: JSON.stringify({ acesso_gratuito: gratuito }) }),
+        adminFetch(`/tenants/${base.id}/notas`,         { method: 'PATCH', body: JSON.stringify({ notas_internas: notas }) }),
       ]);
       toast.success('Cliente atualizado!');
-      onSave();
-      onClose();
-    } catch {
-      toast.error('Erro ao salvar');
-    } finally {
-      setSaving(false);
-    }
+      onSave(); onClose();
+    } catch { toast.error('Erro ao salvar'); }
+    finally { setSaving(false); }
   };
 
+  const planoAtual = planos.find(p => p.id === (detalhe?.plano_id || base.plano_id));
+  const valorPago = planoAtual ? planoAtual.valor_mensal * (1 - (parseFloat(desconto) || 0) / 100) : 0;
+
+  const ABAS = [
+    { id: 'geral',     label: 'Visão Geral',  icon: Building2 },
+    { id: 'config',    label: 'Configurações', icon: ShieldCheck },
+    { id: 'usuarios',  label: `Usuários${detalhe?.usuarios ? ` (${detalhe.usuarios.length})` : ''}`, icon: Users },
+    { id: 'atividade', label: 'Atividade',    icon: Activity },
+  ];
+
+  const InfoRow = ({ label, value, color }) => (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid #1f1f27' }}>
+      <span style={{ color:'#6b7280', fontSize:12 }}>{label}</span>
+      <span style={{ color: color || '#e5e7eb', fontSize:12, fontWeight:600, maxWidth:220, textAlign:'right', wordBreak:'break-word' }}>{value}</span>
+    </div>
+  );
+
+  const Toggle = ({ value, onChange }) => (
+    <button onClick={() => onChange(!value)} style={{ width:44, height:24, borderRadius:12, background: value ? '#7c3aed' : '#374151', border:'none', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+      <span style={{ position:'absolute', width:18, height:18, borderRadius:'50%', background:'#fff', top:3, left: value ? 22 : 4, transition:'left 0.2s' }} />
+    </button>
+  );
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 9999, padding: 16,
-    }}>
-      <div style={{
-        background: '#1a1a1f', border: '1px solid #2d2d35',
-        borderRadius: 16, padding: 32, width: '100%', maxWidth: 540,
-        maxHeight: '90vh', overflowY: 'auto', position: 'relative',
-      }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}>
-          <X size={20} />
-        </button>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, padding:16 }}>
+      <div style={{ background:'#1a1a1f', border:'1px solid #2d2d35', borderRadius:16, width:'100%', maxWidth:860, maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
 
-        <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{tenant.nome_empresa}</h2>
-        <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 24 }}>{tenant.email_contato}</p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div>
-            <label style={labelStyle}>Status da conta</label>
-            <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
-              <option value="trial">Trial</option>
-              <option value="ativo">Ativo</option>
-              <option value="inadimplente">Inadimplente</option>
-              <option value="suspenso">Suspenso</option>
-              <option value="cancelado">Cancelado</option>
-              <option value="expirado">Expirado</option>
-            </select>
+        {/* ── Cabeçalho fixo ── */}
+        <div style={{ padding:'20px 28px 0', borderBottom:'1px solid #2d2d35', flexShrink:0 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+              <div style={{ width:48, height:48, borderRadius:12, background:'rgba(124,58,237,0.12)', border:'1px solid rgba(124,58,237,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Building2 size={22} color="#a78bfa" />
+              </div>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+                  <h2 style={{ color:'#fff', fontSize:18, fontWeight:800 }}>{base.nome_empresa}</h2>
+                  <StatusBadge status={status} />
+                  {gratuito && <span style={{ fontSize:10, color:'#7c3aed', fontWeight:700, background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.25)', padding:'2px 8px', borderRadius:20 }}>🎁 GRÁTIS</span>}
+                </div>
+                <p style={{ color:'#6b7280', fontSize:12 }}>{base.email_contato} · Desde {new Date(base.criado_em).toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background:'none', border:'none', color:'#6b7280', cursor:'pointer' }}><X size={20} /></button>
           </div>
-          {['inadimplente', 'suspenso', 'cancelado'].includes(status) && (
+          <div style={{ display:'flex', gap:0 }}>
+            {ABAS.map(a => (
+              <button key={a.id} onClick={() => setAbaAtiva(a.id)} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 18px', background:'none', border:'none', borderBottom:`2px solid ${abaAtiva===a.id ? '#7c3aed' : 'transparent'}`, color: abaAtiva===a.id ? '#c4b5fd' : '#6b7280', cursor:'pointer', fontSize:13, fontWeight: abaAtiva===a.id ? 700 : 500, transition:'all 0.15s', whiteSpace:'nowrap' }}>
+                <a.icon size={13} />{a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Corpo scrollável ── */}
+        <div style={{ overflowY:'auto', flex:1, padding:'24px 28px' }}>
+
+          {/* ━━ ABA: Visão Geral ━━ */}
+          {abaAtiva === 'geral' && (
+            carregando ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Carregando dados...</div> : (
             <div>
-              <label style={labelStyle}>Motivo do bloqueio</label>
-              <input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex: Fatura vencida há 30 dias" style={inputStyle} />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+
+                {/* Dados da empresa */}
+                <div style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'16px 18px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                    <Building2 size={14} color="#7c3aed" />
+                    <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Dados da Empresa</p>
+                  </div>
+                  <InfoRow label="CNPJ"       value={detalhe?.cnpj || '—'} />
+                  <InfoRow label="E-mail"     value={detalhe?.email_contato || base.email_contato} />
+                  <InfoRow label="Telefone"   value={detalhe?.telefone || '—'} />
+                  <InfoRow label="Cadastro"   value={new Date(base.criado_em).toLocaleDateString('pt-BR')} />
+                  <InfoRow label="Atualizado" value={detalhe?.atualizado_em ? new Date(detalhe.atualizado_em).toLocaleDateString('pt-BR') : '—'} />
+                </div>
+
+                {/* Assinatura */}
+                <div style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'16px 18px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                    <CreditCard size={14} color="#10b981" />
+                    <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Assinatura</p>
+                  </div>
+                  <InfoRow label="Plano"        value={planoAtual?.nome || base.plano_nome || '—'} />
+                  <InfoRow label="Valor pago"   value={planoAtual ? `R$ ${valorPago.toFixed(2).replace('.',',')}` : '—'} color="#10b981" />
+                  <InfoRow label="Desconto"     value={desconto > 0 ? `${desconto}%` : '—'} color={desconto > 0 ? '#7c3aed' : undefined} />
+                  <InfoRow label="Max. usuários" value={planoAtual ? String(planoAtual.max_usuarios) : '—'} />
+                  <InfoRow
+                    label={base.status === 'trial' ? 'Trial expira' : 'Próx. vencimento'}
+                    value={base.trial_expira_em ? new Date(base.trial_expira_em).toLocaleDateString('pt-BR') : (detalhe?.assinatura?.proximo_vencimento ? new Date(detalhe.assinatura.proximo_vencimento).toLocaleDateString('pt-BR') : '—')}
+                    color="#f59e0b"
+                  />
+                  {base.motivo_bloqueio && (
+                    <div style={{ marginTop:10, padding:'8px 10px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:6 }}>
+                      <p style={{ color:'#ef4444', fontSize:11, fontWeight:600 }}>Motivo bloqueio:</p>
+                      <p style={{ color:'#fca5a5', fontSize:11, marginTop:2 }}>{base.motivo_bloqueio}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Métricas de uso */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+                {[
+                  { label:'Usuários',    value: detalhe?.usuarios?.length ?? base.total_usuarios, max: planoAtual?.max_usuarios, icon:'👥', color:'#7c3aed' },
+                  { label:'Pedidos 30d', value: detalhe?.uso?.pedidos_30d != null ? parseInt(detalhe.uso.pedidos_30d) : '—', icon:'🛒', color:'#10b981' },
+                  { label:'Produtos',    value: detalhe?.uso?.total_produtos != null ? parseInt(detalhe.uso.total_produtos) : '—', max: planoAtual?.max_produtos, icon:'📦', color:'#f59e0b' },
+                  { label:'Clientes',    value: detalhe?.uso?.total_clientes != null ? parseInt(detalhe.uso.total_clientes) : '—', icon:'🤝', color:'#3b82f6' },
+                ].map(({ label, value, max, icon, color }) => {
+                  const pct = max && typeof value === 'number' ? Math.min(100, (value/max)*100) : null;
+                  return (
+                    <div key={label} style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'14px 16px' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                        <span style={{ fontSize:18 }}>{icon}</span>
+                        {pct != null && <span style={{ fontSize:10, color: pct>=90 ? '#ef4444' : '#6b7280' }}>{value}/{max}</span>}
+                      </div>
+                      <p style={{ color:'#fff', fontSize:20, fontWeight:800 }}>{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}</p>
+                      <p style={{ color:'#6b7280', fontSize:11 }}>{label}</p>
+                      {pct != null && (
+                        <div style={{ marginTop:6, background:'#1a1a1f', borderRadius:4, height:3 }}>
+                          <div style={{ width:`${pct}%`, height:'100%', background: pct>=90 ? '#ef4444' : color, borderRadius:4 }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {notas && (
+                <div style={{ background:'rgba(124,58,237,0.05)', border:'1px solid rgba(124,58,237,0.15)', borderRadius:8, padding:14 }}>
+                  <p style={{ color:'#a78bfa', fontSize:11, fontWeight:700, marginBottom:6 }}>📝 NOTAS INTERNAS</p>
+                  <p style={{ color:'#d1d5db', fontSize:13, lineHeight:1.6 }}>{notas}</p>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* ━━ ABA: Configurações ━━ */}
+          {abaAtiva === 'config' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+              <div>
+                <label style={labelStyle}>Status da conta</label>
+                <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
+                  <option value="trial">Trial</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inadimplente">Inadimplente</option>
+                  <option value="suspenso">Suspenso</option>
+                  <option value="cancelado">Cancelado</option>
+                  <option value="expirado">Expirado</option>
+                </select>
+              </div>
+              {['inadimplente','suspenso','cancelado'].includes(status) && (
+                <div>
+                  <label style={labelStyle}>Motivo do bloqueio</label>
+                  <input type="text" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex: Fatura vencida há 30 dias" style={inputStyle} />
+                </div>
+              )}
+              <div>
+                <label style={labelStyle}>Plano</label>
+                <select value={planoId} onChange={e => setPlanoId(e.target.value)} style={inputStyle}>
+                  <option value="">Sem plano</option>
+                  {planos.map(p => (
+                    <option key={p.id} value={p.id}>{p.nome} — R$ {parseFloat(p.valor_mensal).toFixed(2)}/mês ({p.max_usuarios} usuários)</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Desconto individual (%)</label>
+                <input type="number" min="0" max="100" step="5" value={desconto} onChange={e => setDesconto(e.target.value)} style={inputStyle} />
+                <p style={{ color:'#6b7280', fontSize:11, marginTop:4 }}>
+                  {desconto > 0 ? `Cliente paga R$ ${valorPago.toFixed(2).replace('.',',')} / mês (${100-desconto}% do plano)` : 'Sem desconto aplicado'}
+                </p>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:8, padding:'12px 16px' }}>
+                <div>
+                  <p style={{ color:'#e5e7eb', fontSize:14, fontWeight:600 }}>Acesso gratuito</p>
+                  <p style={{ color:'#6b7280', fontSize:12 }}>Mantém acesso sem cobrar</p>
+                </div>
+                <Toggle value={gratuito} onChange={setGratuito} />
+              </div>
+              <div>
+                <label style={labelStyle}>Notas internas (só você vê)</label>
+                <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Anotações sobre este cliente..." rows={4} style={{ ...inputStyle, resize:'vertical', fontFamily:'inherit' }} />
+              </div>
+              <button onClick={save} disabled={saving} style={{ padding:'12px 0', background: saving ? '#4b5563' : 'linear-gradient(135deg,#7c3aed,#db2777)', border:'none', borderRadius:8, color:'#fff', fontSize:14, fontWeight:700, cursor: saving ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                <Save size={16} />{saving ? 'Salvando...' : 'Salvar alterações'}
+              </button>
             </div>
           )}
-          <div>
-            <label style={labelStyle}>Plano</label>
-            <select value={planoId} onChange={e => setPlanoId(e.target.value)} style={inputStyle}>
-              <option value="">Sem plano</option>
-              {planos.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} — R$ {parseFloat(p.valor_mensal).toFixed(2)}/mês ({p.max_usuarios} usuários)
-                </option>
+
+          {/* ━━ ABA: Usuários ━━ */}
+          {abaAtiva === 'usuarios' && (
+            carregando ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Carregando...</div> :
+            !detalhe?.usuarios?.length ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Nenhum usuário encontrado</div> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {detalhe.usuarios.map(u => (
+                <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'12px 16px' }}>
+                  <div style={{ width:38, height:38, borderRadius:'50%', background:`${NIVEL_COLOR[u.nivel_permissao]}18`, border:`1px solid ${NIVEL_COLOR[u.nivel_permissao]}35`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <span style={{ fontSize:15, fontWeight:800, color: NIVEL_COLOR[u.nivel_permissao] }}>{u.nome.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                      <p style={{ color:'#fff', fontSize:13, fontWeight:600 }}>{u.nome}</p>
+                      <span style={{ fontSize:10, padding:'1px 7px', borderRadius:20, background:`${NIVEL_COLOR[u.nivel_permissao]}20`, color: NIVEL_COLOR[u.nivel_permissao], fontWeight:700 }}>
+                        {NIVEL_LABEL[u.nivel_permissao] || u.nivel_permissao}
+                      </span>
+                      {u.usa_google && <span style={{ fontSize:10, color:'#6b7280', fontWeight:600 }}>Google</span>}
+                      {!u.ativo && <span style={{ fontSize:10, color:'#ef4444', fontWeight:700 }}>INATIVO</span>}
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
+                      <Mail size={10} color="#6b7280" />
+                      <p style={{ color:'#6b7280', fontSize:11 }}>{u.email}</p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <p style={{ color:'#6b7280', fontSize:10, marginBottom:2 }}>Último acesso</p>
+                    <p style={{ color: u.ultimo_acesso ? '#9ca3af' : '#4b5563', fontSize:11, fontWeight:600 }}>
+                      {u.ultimo_acesso ? new Date(u.ultimo_acesso).toLocaleDateString('pt-BR') : 'Nunca'}
+                    </p>
+                    <p style={{ color:'#4b5563', fontSize:10 }}>desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
               ))}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Desconto individual (%)</label>
-            <input type="number" min="0" max="100" step="5" value={desconto} onChange={e => setDesconto(e.target.value)} style={inputStyle} />
-            <p style={{ color: '#6b7280', fontSize: 11, marginTop: 4 }}>
-              {desconto > 0 ? `Cliente paga ${100 - desconto}% do valor do plano` : 'Sem desconto aplicado'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ color: '#e5e7eb', fontSize: 14, fontWeight: 600 }}>Acesso gratuito</p>
-              <p style={{ color: '#6b7280', fontSize: 12 }}>Mantém acesso sem cobrar</p>
             </div>
-            <button onClick={() => setGratuito(v => !v)} style={{ width: 44, height: 24, borderRadius: 12, background: gratuito ? '#7c3aed' : '#374151', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
-              <span style={{ position: 'absolute', width: 18, height: 18, borderRadius: '50%', background: '#fff', top: 3, left: gratuito ? 22 : 4, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-          <div>
-            <label style={labelStyle}>Notas internas (só você vê)</label>
-            <textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Anotações sobre este cliente..." rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
-          </div>
-          <div style={{ background: '#0f0f10', borderRadius: 8, padding: 12, fontSize: 12, color: '#6b7280' }}>
-            <p>Usuários: <strong style={{ color: '#e5e7eb' }}>{tenant.total_usuarios}</strong></p>
-            <p>Cadastrado: <strong style={{ color: '#e5e7eb' }}>{new Date(tenant.criado_em).toLocaleDateString('pt-BR')}</strong></p>
-            {tenant.trial_expira_em && (
-              <p>Trial expira: <strong style={{ color: '#f59e0b' }}>{new Date(tenant.trial_expira_em).toLocaleDateString('pt-BR')}</strong></p>
-            )}
-          </div>
-          <button onClick={save} disabled={saving} style={{ padding: '12px 0', background: saving ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #db2777)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <Save size={16} />
-            {saving ? 'Salvando...' : 'Salvar alterações'}
-          </button>
+          ))}
+
+          {/* ━━ ABA: Atividade ━━ */}
+          {abaAtiva === 'atividade' && (
+            carregando ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Carregando...</div> : (
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Uso vs. Limites do Plano</p>
+              {[
+                { label:'Usuários cadastrados', current: detalhe?.usuarios?.length ?? 0, max: planoAtual?.max_usuarios, color:'#7c3aed' },
+                { label:'Produtos cadastrados', current: parseInt(detalhe?.uso?.total_produtos ?? 0), max: planoAtual?.max_produtos, color:'#f59e0b' },
+              ].map(({ label, current, max, color }) => {
+                const pct = max ? Math.min(100, (current/max)*100) : 0;
+                const alertColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : color;
+                return (
+                  <div key={label} style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'14px 18px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                      <span style={{ color:'#e5e7eb', fontSize:13, fontWeight:600 }}>{label}</span>
+                      <span style={{ color:alertColor, fontSize:13, fontWeight:700 }}>{current.toLocaleString('pt-BR')}{max ? ` / ${max.toLocaleString('pt-BR')}` : ''}</span>
+                    </div>
+                    {max && (
+                      <div style={{ background:'#1a1a1f', borderRadius:6, height:6 }}>
+                        <div style={{ width:`${pct}%`, height:'100%', background:alertColor, borderRadius:6, transition:'width 0.4s' }} />
+                      </div>
+                    )}
+                    {pct >= 90 && <p style={{ color:'#ef4444', fontSize:11, marginTop:6 }}>⚠️ Limite quase atingido ({pct.toFixed(0)}%)</p>}
+                  </div>
+                );
+              })}
+
+              <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase', marginTop:4 }}>Resumo de Uso</p>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                {[
+                  { label:'Total de pedidos',    value: detalhe?.uso?.total_pedidos != null ? parseInt(detalhe.uso.total_pedidos) : '—', icon:'🛒' },
+                  { label:'Pedidos últimos 30d', value: detalhe?.uso?.pedidos_30d   != null ? parseInt(detalhe.uso.pedidos_30d)   : '—', icon:'📊' },
+                  { label:'Clientes cadastrados',value: detalhe?.uso?.total_clientes != null ? parseInt(detalhe.uso.total_clientes): '—', icon:'🤝' },
+                  { label:'Usuários ativos',     value: detalhe?.usuarios ? detalhe.usuarios.filter(u => u.ativo).length : '—', icon:'👥' },
+                ].map(({ label, value, icon }) => (
+                  <div key={label} style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:16 }}>
+                    <span style={{ fontSize:22 }}>{icon}</span>
+                    <p style={{ color:'#fff', fontSize:22, fontWeight:800, marginTop:6 }}>{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}</p>
+                    <p style={{ color:'#6b7280', fontSize:11 }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {detalhe?.assinatura && (
+                <>
+                  <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase', marginTop:4 }}>Assinatura Ativa</p>
+                  <div style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'14px 18px' }}>
+                    <InfoRow label="Status"      value={detalhe.assinatura.status} />
+                    <InfoRow label="Período"     value={detalhe.assinatura.periodo === 'anual' ? 'Anual' : 'Mensal'} />
+                    <InfoRow label="Valor"       value={`R$ ${parseFloat(detalhe.assinatura.valor).toFixed(2).replace('.',',')}`} color="#10b981" />
+                    <InfoRow label="Próx. cobrança" value={detalhe.assinatura.proximo_vencimento ? new Date(detalhe.assinatura.proximo_vencimento).toLocaleDateString('pt-BR') : '—'} color="#f59e0b" />
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+
         </div>
       </div>
     </div>

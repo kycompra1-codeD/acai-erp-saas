@@ -165,13 +165,37 @@ router.get('/tenants/:id', adminMiddleware, async (req, res) => {
       return res.status(404).json({ sucesso: false, mensagem: 'Cliente não encontrado.' });
     }
 
-    const usuarios = await query(
-      `SELECT id, nome, email, nivel_permissao, ativo, ultimo_acesso, google_id IS NOT NULL as usa_google
-       FROM usuarios WHERE tenant_id = $1 ORDER BY nivel_permissao, nome`,
-      [req.params.id]
-    );
+    const [usuarios, uso, assinatura] = await Promise.all([
+      query(
+        `SELECT id, nome, email, nivel_permissao, ativo, ultimo_acesso, criado_em,
+                google_id IS NOT NULL AS usa_google
+         FROM usuarios WHERE tenant_id = $1 ORDER BY nivel_permissao, nome`,
+        [req.params.id]
+      ),
+      query(
+        `SELECT
+           (SELECT COUNT(*) FROM pedidos       WHERE tenant_id = $1)                                           AS total_pedidos,
+           (SELECT COUNT(*) FROM pedidos       WHERE tenant_id = $1 AND criado_em >= NOW() - INTERVAL '30d')   AS pedidos_30d,
+           (SELECT COUNT(*) FROM produtos      WHERE tenant_id = $1)                                           AS total_produtos,
+           (SELECT COUNT(*) FROM clientes      WHERE tenant_id = $1)                                           AS total_clientes`,
+        [req.params.id]
+      ),
+      query(
+        `SELECT id, status, periodo, valor, proximo_vencimento, criado_em
+         FROM assinaturas WHERE tenant_id = $1 ORDER BY criado_em DESC LIMIT 1`,
+        [req.params.id]
+      ),
+    ]);
 
-    return res.json({ sucesso: true, dados: { ...rows[0], usuarios: usuarios.rows } });
+    return res.json({
+      sucesso: true,
+      dados: {
+        ...rows[0],
+        usuarios: usuarios.rows,
+        uso: uso.rows[0] || {},
+        assinatura: assinatura.rows[0] || null,
+      },
+    });
   } catch (err) {
     console.error('❌ Admin tenant detalhe:', err);
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
