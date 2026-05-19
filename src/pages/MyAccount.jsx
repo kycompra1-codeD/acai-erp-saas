@@ -58,9 +58,17 @@ export default function MyAccount() {
     nomeFantasia: '',
     cnpj: '',
     ie: '',
+    ieIsento: false,
+    im: '',
+    cnae: '',
+    website: '',
+    tipoPessoa: 'PJ',
     telefone: '',
     emailComercial: '',
     regimeTributario: 'Simples Nacional',
+    responsavelNome: '',
+    responsavelEmail: '',
+    responsavelCelular: '',
   });
 
   const [endereco, setEndereco] = useState({
@@ -85,13 +93,21 @@ export default function MyAccount() {
         if (!r.sucesso) return;
         const d = r.dados;
         setDadosEmpresa({
-          razaoSocial:      d.razao_social      || '',
-          nomeFantasia:     d.nome_empresa       || '',
-          cnpj:             d.cnpj               || '',
-          ie:               d.inscricao_estadual || '',
-          telefone:         d.telefone           || '',
-          emailComercial:   d.email_comercial || d.email_contato || '',
-          regimeTributario: d.regime_tributario  || 'Simples Nacional',
+          razaoSocial:       d.razao_social       || '',
+          nomeFantasia:      d.nome_empresa        || '',
+          cnpj:              d.cnpj                || '',
+          ie:                d.inscricao_estadual  || '',
+          ieIsento:          d.ie_isento           || false,
+          im:                d.inscricao_municipal || '',
+          cnae:              d.cnae                || '',
+          website:           d.website             || '',
+          tipoPessoa:        d.tipo_pessoa         || 'PJ',
+          telefone:          d.telefone            || '',
+          emailComercial:    d.email_comercial || d.email_contato || '',
+          regimeTributario:  d.regime_tributario   || 'Simples Nacional',
+          responsavelNome:   d.responsavel_nome    || '',
+          responsavelEmail:  d.responsavel_email   || '',
+          responsavelCelular:d.responsavel_celular || '',
         });
         setEndereco({
           cep:         d.cep         || '',
@@ -161,13 +177,21 @@ export default function MyAccount() {
       }
       if (activeTab === 'empresa') {
         payload = {
-          nome_empresa:       dadosEmpresa.nomeFantasia,
-          razao_social:       dadosEmpresa.razaoSocial,
-          cnpj:               dadosEmpresa.cnpj,
-          inscricao_estadual: dadosEmpresa.ie,
-          regime_tributario:  dadosEmpresa.regimeTributario,
-          telefone:           dadosEmpresa.telefone,
-          email_comercial:    dadosEmpresa.emailComercial,
+          nome_empresa:         dadosEmpresa.nomeFantasia,
+          razao_social:         dadosEmpresa.razaoSocial,
+          cnpj:                 dadosEmpresa.cnpj,
+          inscricao_estadual:   dadosEmpresa.ie,
+          ie_isento:            dadosEmpresa.ieIsento,
+          inscricao_municipal:  dadosEmpresa.im,
+          cnae:                 dadosEmpresa.cnae,
+          website:              dadosEmpresa.website,
+          tipo_pessoa:          dadosEmpresa.tipoPessoa,
+          regime_tributario:    dadosEmpresa.regimeTributario,
+          telefone:             dadosEmpresa.telefone,
+          email_comercial:      dadosEmpresa.emailComercial,
+          responsavel_nome:     dadosEmpresa.responsavelNome,
+          responsavel_email:    dadosEmpresa.responsavelEmail,
+          responsavel_celular:  dadosEmpresa.responsavelCelular,
         };
       }
       if (activeTab === 'endereco') {
@@ -339,6 +363,21 @@ export default function MyAccount() {
 
                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className="form-group">
+                    <label>Tipo de Pessoa</label>
+                    <select className="input" value={dadosEmpresa.tipoPessoa} onChange={e => setDadosEmpresa({...dadosEmpresa, tipoPessoa: e.target.value})}>
+                      <option value="PJ">Pessoa Jurídica (PJ)</option>
+                      <option value="PF">Pessoa Física (PF)</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Regime Tributário</label>
+                    <select className="input" value={dadosEmpresa.regimeTributario} onChange={e => setDadosEmpresa({...dadosEmpresa, regimeTributario: e.target.value})}>
+                      <option value="Simples Nacional">Simples Nacional</option>
+                      <option value="Lucro Presumido">Lucro Presumido</option>
+                      <option value="Lucro Real">Lucro Real</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
                     <label>Razão Social</label>
                     <input type="text" className="input" value={dadosEmpresa.razaoSocial} onChange={e => setDadosEmpresa({...dadosEmpresa, razaoSocial: e.target.value})} />
                   </div>
@@ -352,7 +391,19 @@ export default function MyAccount() {
                   </div>
                   <div className="form-group">
                     <label>Inscrição Estadual (IE)</label>
-                    <input type="text" className="input" value={dadosEmpresa.ie} onChange={e => setDadosEmpresa({...dadosEmpresa, ie: e.target.value})} />
+                    <input type="text" className="input" value={dadosEmpresa.ie} disabled={dadosEmpresa.ieIsento} onChange={e => setDadosEmpresa({...dadosEmpresa, ie: e.target.value})} />
+                  </div>
+                  <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '-8px' }}>
+                    <input type="checkbox" id="ie-isento" checked={dadosEmpresa.ieIsento} onChange={e => setDadosEmpresa({...dadosEmpresa, ieIsento: e.target.checked, ie: e.target.checked ? 'ISENTO' : ''})} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                    <label htmlFor="ie-isento" style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>IE Isento</label>
+                  </div>
+                  <div className="form-group">
+                    <label>Inscrição Municipal (IM)</label>
+                    <input type="text" className="input" value={dadosEmpresa.im} onChange={e => setDadosEmpresa({...dadosEmpresa, im: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>CNAE</label>
+                    <input type="text" className="input" value={dadosEmpresa.cnae} onChange={e => setDadosEmpresa({...dadosEmpresa, cnae: e.target.value})} placeholder="0000-0/00" />
                   </div>
                   <div className="form-group">
                     <label>Telefone Comercial</label>
@@ -362,16 +413,31 @@ export default function MyAccount() {
                     <label>E-mail Comercial</label>
                     <input type="email" className="input" value={dadosEmpresa.emailComercial} onChange={e => setDadosEmpresa({...dadosEmpresa, emailComercial: e.target.value})} />
                   </div>
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label>Website</label>
+                    <input type="url" className="input" value={dadosEmpresa.website} onChange={e => setDadosEmpresa({...dadosEmpresa, website: e.target.value})} placeholder="https://www.suaempresa.com.br" />
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Regime Tributário</label>
-                <select className="input" value={dadosEmpresa.regimeTributario} onChange={e => setDadosEmpresa({...dadosEmpresa, regimeTributario: e.target.value})} style={{ maxWidth: '400px' }}>
-                  <option value="Simples Nacional">Simples Nacional</option>
-                  <option value="Lucro Presumido">Lucro Presumido</option>
-                  <option value="Lucro Real">Lucro Real</option>
-                </select>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '8px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <User size={16} color="var(--primary)" /> Pessoa Responsável
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                  <div className="form-group">
+                    <label>Nome do Responsável</label>
+                    <input type="text" className="input" value={dadosEmpresa.responsavelNome} onChange={e => setDadosEmpresa({...dadosEmpresa, responsavelNome: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>E-mail do Responsável</label>
+                    <input type="email" className="input" value={dadosEmpresa.responsavelEmail} onChange={e => setDadosEmpresa({...dadosEmpresa, responsavelEmail: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label>Celular / WhatsApp</label>
+                    <input type="text" className="input" value={dadosEmpresa.responsavelCelular} onChange={e => setDadosEmpresa({...dadosEmpresa, responsavelCelular: e.target.value})} placeholder="(11) 99999-9999" />
+                  </div>
+                </div>
               </div>
             </div>
           )}

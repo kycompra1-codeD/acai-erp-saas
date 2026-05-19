@@ -339,9 +339,11 @@ router.patch('/tenants/:id/notas', adminMiddleware, [
 // PATCH /api/admin/tenants/:id/perfil — Admin edita dados cadastrais
 // ============================================================
 const CAMPOS_PERFIL_TENANT = [
-  'nome_empresa', 'razao_social', 'cnpj', 'inscricao_estadual',
+  'nome_empresa', 'razao_social', 'cnpj', 'inscricao_estadual', 'inscricao_municipal',
+  'cnae', 'ie_isento', 'website', 'tipo_pessoa',
   'regime_tributario', 'telefone', 'email_contato', 'email_comercial',
   'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado',
+  'responsavel_nome', 'responsavel_email', 'responsavel_celular',
 ];
 router.patch('/tenants/:id/perfil', adminMiddleware, async (req, res) => {
   const updates = [];
@@ -367,6 +369,56 @@ router.patch('/tenants/:id/perfil', adminMiddleware, async (req, res) => {
     return res.json({ sucesso: true, dados: rows[0] });
   } catch (err) {
     console.error('❌ Admin perfil empresa:', err);
+    return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
+  }
+});
+
+// ============================================================
+// PATCH /api/admin/usuarios/:id/credenciais — Admin atualiza email/senha de usuário
+// ============================================================
+router.patch('/usuarios/:id/credenciais', adminMiddleware, [
+  body('email').optional().isEmail().normalizeEmail(),
+  body('senha').optional().isLength({ min: 6 }),
+], async (req, res) => {
+  const erros = validationResult(req);
+  if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });
+
+  const { email, senha } = req.body;
+  if (!email && !senha) {
+    return res.status(400).json({ sucesso: false, mensagem: 'Informe email ou senha para atualizar.' });
+  }
+
+  const updates = [];
+  const values = [];
+
+  if (email) {
+    const { rows: exist } = await query(
+      'SELECT id FROM usuarios WHERE email = $1 AND id != $2', [email, req.params.id]
+    );
+    if (exist.length > 0) {
+      return res.status(409).json({ sucesso: false, mensagem: 'Este e-mail já está em uso por outro usuário.' });
+    }
+    values.push(email);
+    updates.push(`email = $${values.length}`);
+  }
+
+  if (senha) {
+    const hash = await bcrypt.hash(senha, 12);
+    values.push(hash);
+    updates.push(`senha_hash = $${values.length}`);
+  }
+
+  values.push(req.params.id);
+
+  try {
+    const { rows } = await query(
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE id = $${values.length} RETURNING id, nome, email`,
+      values
+    );
+    if (rows.length === 0) return res.status(404).json({ sucesso: false, mensagem: 'Usuário não encontrado.' });
+    return res.json({ sucesso: true, dados: rows[0] });
+  } catch (err) {
+    console.error('❌ Admin credenciais:', err);
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno.' });
   }
 });

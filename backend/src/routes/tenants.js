@@ -6,18 +6,22 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
 const CAMPOS_PERFIL = [
-  'nome_empresa', 'razao_social', 'cnpj', 'inscricao_estadual',
+  'nome_empresa', 'razao_social', 'cnpj', 'inscricao_estadual', 'inscricao_municipal',
+  'cnae', 'ie_isento', 'website', 'tipo_pessoa',
   'regime_tributario', 'telefone', 'email_contato', 'email_comercial',
   'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado',
+  'responsavel_nome', 'responsavel_email', 'responsavel_celular',
 ];
 
 // GET /api/tenants/perfil
 router.get('/perfil', authMiddleware, async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, nome_empresa, razao_social, cnpj, inscricao_estadual, regime_tributario,
-              telefone, email_contato, email_comercial, logo_url,
+      `SELECT id, nome_empresa, razao_social, cnpj, inscricao_estadual, inscricao_municipal,
+              cnae, ie_isento, website, tipo_pessoa,
+              regime_tributario, telefone, email_contato, email_comercial, logo_url,
               cep, logradouro, numero, complemento, bairro, cidade, estado,
+              responsavel_nome, responsavel_email, responsavel_celular,
               status, plano_id, trial_expira_em, criado_em, atualizado_em
        FROM tenants WHERE id = $1`,
       [req.usuario.tenant_id]
@@ -47,6 +51,14 @@ router.patch('/perfil', authMiddleware, [
   body('bairro').optional().trim(),
   body('cidade').optional().trim(),
   body('estado').optional().isLength({ min: 2, max: 2 }).trim(),
+  body('inscricao_municipal').optional().trim(),
+  body('cnae').optional().trim(),
+  body('ie_isento').optional().isBoolean(),
+  body('website').optional().trim(),
+  body('tipo_pessoa').optional().isIn(['PF', 'PJ']),
+  body('responsavel_nome').optional().trim(),
+  body('responsavel_email').optional().isEmail().normalizeEmail(),
+  body('responsavel_celular').optional().trim(),
 ], async (req, res) => {
   const erros = validationResult(req);
   if (!erros.isEmpty()) return res.status(400).json({ sucesso: false, erros: erros.array() });

@@ -249,10 +249,14 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
   // Dados cadastrais editáveis pelo admin
   const [empresa, setEmpresa] = useState({
     nome_empresa: base.nome_empresa || '', razao_social: '', cnpj: base.cnpj || '',
-    inscricao_estadual: '', regime_tributario: 'Simples Nacional',
+    inscricao_estadual: '', inscricao_municipal: '', cnae: '', ie_isento: false,
+    website: '', tipo_pessoa: 'PJ', regime_tributario: 'Simples Nacional',
     telefone: base.telefone || '', email_contato: base.email_contato || '', email_comercial: '',
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+    responsavel_nome: '', responsavel_email: '', responsavel_celular: '',
   });
+  const [credenciais, setCredenciais] = useState({ usuarioId: null, email: '', senha: '', confirmSenha: '' });
+  const [savingCred, setSavingCred] = useState(false);
   const [savingEmpresa, setSavingEmpresa] = useState(false);
 
   // Módulos override por cliente
@@ -268,21 +272,29 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
           setDetalhe(r.dados);
           const d = r.dados;
           setEmpresa({
-            nome_empresa:       d.nome_empresa       || '',
-            razao_social:       d.razao_social        || '',
-            cnpj:               d.cnpj               || '',
-            inscricao_estadual: d.inscricao_estadual  || '',
-            regime_tributario:  d.regime_tributario   || 'Simples Nacional',
-            telefone:           d.telefone            || '',
-            email_contato:      d.email_contato       || '',
-            email_comercial:    d.email_comercial     || '',
-            cep:                d.cep                 || '',
-            logradouro:         d.logradouro          || '',
-            numero:             d.numero              || '',
-            complemento:        d.complemento         || '',
-            bairro:             d.bairro              || '',
-            cidade:             d.cidade              || '',
-            estado:             d.estado              || '',
+            nome_empresa:         d.nome_empresa         || '',
+            razao_social:         d.razao_social          || '',
+            cnpj:                 d.cnpj                 || '',
+            inscricao_estadual:   d.inscricao_estadual    || '',
+            inscricao_municipal:  d.inscricao_municipal   || '',
+            cnae:                 d.cnae                 || '',
+            ie_isento:            d.ie_isento            || false,
+            website:              d.website              || '',
+            tipo_pessoa:          d.tipo_pessoa          || 'PJ',
+            regime_tributario:    d.regime_tributario     || 'Simples Nacional',
+            telefone:             d.telefone             || '',
+            email_contato:        d.email_contato        || '',
+            email_comercial:      d.email_comercial      || '',
+            cep:                  d.cep                  || '',
+            logradouro:           d.logradouro           || '',
+            numero:               d.numero               || '',
+            complemento:          d.complemento          || '',
+            bairro:               d.bairro               || '',
+            cidade:               d.cidade               || '',
+            estado:               d.estado               || '',
+            responsavel_nome:     d.responsavel_nome     || '',
+            responsavel_email:    d.responsavel_email    || '',
+            responsavel_celular:  d.responsavel_celular  || '',
           });
           // Módulos: usa override se existir, senão usa módulos do plano
           const override = d.modulos_override;
@@ -323,6 +335,34 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
       else toast.error(r.mensagem || 'Erro ao salvar');
     } catch { toast.error('Erro ao salvar módulos'); }
     finally { setSavingModulos(false); }
+  };
+
+  const saveCred = async () => {
+    if (!credenciais.usuarioId) return;
+    if (credenciais.senha && credenciais.senha !== credenciais.confirmSenha) {
+      toast.error('As senhas não conferem'); return;
+    }
+    if (!credenciais.email && !credenciais.senha) {
+      toast.error('Informe e-mail ou senha para atualizar'); return;
+    }
+    setSavingCred(true);
+    try {
+      const body = {};
+      if (credenciais.email) body.email = credenciais.email;
+      if (credenciais.senha) body.senha = credenciais.senha;
+      const r = await adminFetch(`/usuarios/${credenciais.usuarioId}/credenciais`, {
+        method: 'PATCH', body: JSON.stringify(body),
+      });
+      if (r.sucesso) {
+        toast.success('Credenciais atualizadas!');
+        setCredenciais({ usuarioId: null, email: '', senha: '', confirmSenha: '' });
+        // Atualiza e-mail exibido na lista
+        if (detalhe?.usuarios) {
+          setDetalhe(d => ({ ...d, usuarios: d.usuarios.map(u => u.id === r.dados.id ? { ...u, email: r.dados.email } : u) }));
+        }
+      } else { toast.error(r.mensagem || 'Erro ao atualizar'); }
+    } catch { toast.error('Erro ao salvar credenciais'); }
+    finally { setSavingCred(false); }
   };
 
   const save = async () => {
@@ -592,6 +632,21 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                   <div>
+                    <label style={labelStyle}>Tipo de Pessoa</label>
+                    <select value={empresa.tipo_pessoa} onChange={e => setEmpresa(p=>({...p, tipo_pessoa: e.target.value}))} style={inputStyle}>
+                      <option value="PJ">Pessoa Jurídica (PJ)</option>
+                      <option value="PF">Pessoa Física (PF)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Regime Tributário</label>
+                    <select value={empresa.regime_tributario} onChange={e => setEmpresa(p=>({...p, regime_tributario: e.target.value}))} style={inputStyle}>
+                      <option value="Simples Nacional">Simples Nacional</option>
+                      <option value="Lucro Presumido">Lucro Presumido</option>
+                      <option value="Lucro Real">Lucro Real</option>
+                    </select>
+                  </div>
+                  <div>
                     <label style={labelStyle}>Nome Fantasia</label>
                     <input value={empresa.nome_empresa} onChange={e => setEmpresa(p=>({...p, nome_empresa: e.target.value}))} style={inputStyle} placeholder="Nome Fantasia" />
                   </div>
@@ -604,16 +659,24 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
                     <input value={empresa.cnpj} onChange={e => setEmpresa(p=>({...p, cnpj: e.target.value}))} style={inputStyle} placeholder="00.000.000/0001-00" />
                   </div>
                   <div>
-                    <label style={labelStyle}>Inscrição Estadual</label>
-                    <input value={empresa.inscricao_estadual} onChange={e => setEmpresa(p=>({...p, inscricao_estadual: e.target.value}))} style={inputStyle} placeholder="Isento" />
+                    <label style={labelStyle}>Inscrição Estadual (IE)</label>
+                    <input value={empresa.inscricao_estadual} disabled={empresa.ie_isento} onChange={e => setEmpresa(p=>({...p, inscricao_estadual: e.target.value}))} style={inputStyle} placeholder="Isento" />
+                  </div>
+                  <div style={{ gridColumn:'1/-1', display:'flex', alignItems:'center', gap:8, marginTop:-4 }}>
+                    <input type="checkbox" id="adm-ie-isento" checked={empresa.ie_isento} onChange={e => setEmpresa(p=>({...p, ie_isento: e.target.checked, inscricao_estadual: e.target.checked ? 'ISENTO' : ''}))} style={{ width:15, height:15, cursor:'pointer', accentColor:'#7c3aed' }} />
+                    <label htmlFor="adm-ie-isento" style={{ color:'#9ca3af', fontSize:12, cursor:'pointer' }}>IE Isento</label>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Inscrição Municipal (IM)</label>
+                    <input value={empresa.inscricao_municipal} onChange={e => setEmpresa(p=>({...p, inscricao_municipal: e.target.value}))} style={inputStyle} placeholder="0000000" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>CNAE</label>
+                    <input value={empresa.cnae} onChange={e => setEmpresa(p=>({...p, cnae: e.target.value}))} style={inputStyle} placeholder="0000-0/00" />
                   </div>
                   <div style={{ gridColumn:'1/-1' }}>
-                    <label style={labelStyle}>Regime Tributário</label>
-                    <select value={empresa.regime_tributario} onChange={e => setEmpresa(p=>({...p, regime_tributario: e.target.value}))} style={inputStyle}>
-                      <option value="Simples Nacional">Simples Nacional</option>
-                      <option value="Lucro Presumido">Lucro Presumido</option>
-                      <option value="Lucro Real">Lucro Real</option>
-                    </select>
+                    <label style={labelStyle}>Website</label>
+                    <input type="url" value={empresa.website} onChange={e => setEmpresa(p=>({...p, website: e.target.value}))} style={inputStyle} placeholder="https://www.empresa.com.br" />
                   </div>
                 </div>
               </div>
@@ -636,6 +699,28 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
                   <div style={{ gridColumn:'1/-1' }}>
                     <label style={labelStyle}>E-mail Comercial</label>
                     <input type="email" value={empresa.email_comercial} onChange={e => setEmpresa(p=>({...p, email_comercial: e.target.value}))} style={inputStyle} placeholder="comercial@empresa.com" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Responsável */}
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <Users size={14} color="#f59e0b" />
+                  <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Pessoa Responsável</p>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+                  <div>
+                    <label style={labelStyle}>Nome</label>
+                    <input value={empresa.responsavel_nome} onChange={e => setEmpresa(p=>({...p, responsavel_nome: e.target.value}))} style={inputStyle} placeholder="Nome completo" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>E-mail</label>
+                    <input type="email" value={empresa.responsavel_email} onChange={e => setEmpresa(p=>({...p, responsavel_email: e.target.value}))} style={inputStyle} placeholder="responsavel@empresa.com" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Celular / WhatsApp</label>
+                    <input value={empresa.responsavel_celular} onChange={e => setEmpresa(p=>({...p, responsavel_celular: e.target.value}))} style={inputStyle} placeholder="(11) 99999-9999" />
                   </div>
                 </div>
               </div>
@@ -770,31 +855,62 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
             !detalhe?.usuarios?.length ? <div style={{ textAlign:'center', padding:48, color:'#6b7280' }}>Nenhum usuário encontrado</div> : (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {detalhe.usuarios.map(u => (
-                <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'12px 16px' }}>
-                  <div style={{ width:38, height:38, borderRadius:'50%', background:`${NIVEL_COLOR[u.nivel_permissao]}18`, border:`1px solid ${NIVEL_COLOR[u.nivel_permissao]}35`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <span style={{ fontSize:15, fontWeight:800, color: NIVEL_COLOR[u.nivel_permissao] }}>{u.nome.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                      <p style={{ color:'#fff', fontSize:13, fontWeight:600 }}>{u.nome}</p>
-                      <span style={{ fontSize:10, padding:'1px 7px', borderRadius:20, background:`${NIVEL_COLOR[u.nivel_permissao]}20`, color: NIVEL_COLOR[u.nivel_permissao], fontWeight:700 }}>
-                        {NIVEL_LABEL[u.nivel_permissao] || u.nivel_permissao}
-                      </span>
-                      {u.usa_google && <span style={{ fontSize:10, color:'#6b7280', fontWeight:600 }}>Google</span>}
-                      {!u.ativo && <span style={{ fontSize:10, color:'#ef4444', fontWeight:700 }}>INATIVO</span>}
+                <div key={u.id}>
+                  <div style={{ display:'flex', alignItems:'center', gap:12, background:'#0f0f10', border:`1px solid ${credenciais.usuarioId === u.id ? '#7c3aed' : '#2d2d35'}`, borderRadius: credenciais.usuarioId === u.id ? '10px 10px 0 0' : 10, padding:'12px 16px' }}>
+                    <div style={{ width:38, height:38, borderRadius:'50%', background:`${NIVEL_COLOR[u.nivel_permissao]}18`, border:`1px solid ${NIVEL_COLOR[u.nivel_permissao]}35`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:15, fontWeight:800, color: NIVEL_COLOR[u.nivel_permissao] }}>{u.nome.charAt(0).toUpperCase()}</span>
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
-                      <Mail size={10} color="#6b7280" />
-                      <p style={{ color:'#6b7280', fontSize:11 }}>{u.email}</p>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                        <p style={{ color:'#fff', fontSize:13, fontWeight:600 }}>{u.nome}</p>
+                        <span style={{ fontSize:10, padding:'1px 7px', borderRadius:20, background:`${NIVEL_COLOR[u.nivel_permissao]}20`, color: NIVEL_COLOR[u.nivel_permissao], fontWeight:700 }}>
+                          {NIVEL_LABEL[u.nivel_permissao] || u.nivel_permissao}
+                        </span>
+                        {u.usa_google && <span style={{ fontSize:10, color:'#6b7280', fontWeight:600 }}>Google</span>}
+                        {!u.ativo && <span style={{ fontSize:10, color:'#ef4444', fontWeight:700 }}>INATIVO</span>}
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:2 }}>
+                        <Mail size={10} color="#6b7280" />
+                        <p style={{ color:'#6b7280', fontSize:11 }}>{u.email}</p>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <p style={{ color:'#6b7280', fontSize:10, marginBottom:2 }}>Último acesso</p>
+                      <p style={{ color: u.ultimo_acesso ? '#9ca3af' : '#4b5563', fontSize:11, fontWeight:600 }}>
+                        {u.ultimo_acesso ? new Date(u.ultimo_acesso).toLocaleDateString('pt-BR') : 'Nunca'}
+                      </p>
+                      <p style={{ color:'#4b5563', fontSize:10, marginBottom:6 }}>desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}</p>
+                      <button
+                        onClick={() => setCredenciais(c => c.usuarioId === u.id ? { usuarioId: null, email: '', senha: '', confirmSenha: '' } : { usuarioId: u.id, email: u.email, senha: '', confirmSenha: '' })}
+                        style={{ fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:6, border:'1px solid #374151', background: credenciais.usuarioId === u.id ? 'rgba(124,58,237,0.15)' : 'transparent', color: credenciais.usuarioId === u.id ? '#a78bfa' : '#6b7280', cursor:'pointer' }}
+                      >
+                        {credenciais.usuarioId === u.id ? 'Cancelar' : 'Credenciais'}
+                      </button>
                     </div>
                   </div>
-                  <div style={{ textAlign:'right', flexShrink:0 }}>
-                    <p style={{ color:'#6b7280', fontSize:10, marginBottom:2 }}>Último acesso</p>
-                    <p style={{ color: u.ultimo_acesso ? '#9ca3af' : '#4b5563', fontSize:11, fontWeight:600 }}>
-                      {u.ultimo_acesso ? new Date(u.ultimo_acesso).toLocaleDateString('pt-BR') : 'Nunca'}
-                    </p>
-                    <p style={{ color:'#4b5563', fontSize:10 }}>desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}</p>
-                  </div>
+
+                  {credenciais.usuarioId === u.id && (
+                    <div style={{ background:'rgba(124,58,237,0.06)', border:'1px solid #7c3aed', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'16px' }}>
+                      <p style={{ color:'#a78bfa', fontSize:11, fontWeight:700, textTransform:'uppercase', marginBottom:12 }}>Atualizar login / senha de {u.nome}</p>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                        <div>
+                          <label style={labelStyle}>Novo e-mail</label>
+                          <input type="email" value={credenciais.email} onChange={e => setCredenciais(c=>({...c, email: e.target.value}))} style={inputStyle} placeholder={u.email} />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Nova senha</label>
+                          <input type="password" value={credenciais.senha} onChange={e => setCredenciais(c=>({...c, senha: e.target.value}))} style={inputStyle} placeholder="Mínimo 6 caracteres" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Confirmar senha</label>
+                          <input type="password" value={credenciais.confirmSenha} onChange={e => setCredenciais(c=>({...c, confirmSenha: e.target.value}))} style={inputStyle} placeholder="Repita a nova senha" />
+                        </div>
+                      </div>
+                      <button onClick={saveCred} disabled={savingCred} style={{ marginTop:10, padding:'8px 20px', background: savingCred ? '#4b5563' : 'linear-gradient(135deg,#7c3aed,#db2777)', border:'none', borderRadius:6, color:'#fff', fontSize:12, fontWeight:700, cursor: savingCred ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                        <Save size={13} />{savingCred ? 'Salvando...' : 'Salvar credenciais'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
