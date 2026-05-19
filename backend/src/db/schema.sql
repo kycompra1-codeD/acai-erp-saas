@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS assinaturas (
     proximo_vencimento TIMESTAMPTZ,
     cancelado_em TIMESTAMPTZ,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(tenant_id, gateway_subscription_id)
 );
 
 -- ============================================================

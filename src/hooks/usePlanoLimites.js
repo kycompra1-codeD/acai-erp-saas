@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 const MODULOS_TODOS = [
   'vendas', 'estoque', 'clientes', 'financeiro', 'crm', 'nfe',
   'relatorios', 'metas', 'multi_filial', 'api_acesso', 'suporte_prioritario',
+  'compras', 'logistica', 'fidelidade', 'automacoes', 'funcionarios'
 ];
 
 export function usePlanoLimites() {

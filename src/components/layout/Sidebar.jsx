@@ -27,12 +27,12 @@ const navItems = [
   { group: 'SaaS — Novos Módulos', items: [
     { to: '/integrations', icon: Globe,    label: 'Hub de Integração', section: 'integrations', extensionId: 'hub', isNew: true },
     { to: '/logistics',    icon: Truck,    label: 'Expedição (Logística)', section: 'logistics', extensionId: 'logistics', isNew: true },
-    { to: '/purchases',    icon: Archive,  label: 'Compras (Suprimentos)', section: 'purchases', extensionId: 'purchases', isNew: true },
+    { to: '/purchases',    icon: Archive,  label: 'Compras (Suprimentos)', section: 'purchases', isNew: true },
     { to: '/crm',          icon: UserCog,  label: 'CRM / Funil',       section: 'crm',          extensionId: 'crm', isNew: true },
     { to: '/automations',  icon: Zap,      label: 'Automações',        section: 'automations',  extensionId: 'ai', isNew: true },
     { to: '/fiscal',       icon: FileText, label: 'Fiscal (NF-e)',     section: 'fiscal',       extensionId: 'fiscal', isNew: true },
     { to: '/loyalty',      icon: Heart,    label: 'Fidelidade (PRO)',   section: 'customers',    extensionId: 'loyalty', isNew: true },
-    { to: '/bi',           icon: BrainCircuit, label: 'B.I. Avançado',  section: 'reports',      extensionId: 'bi', isNew: true },
+    { to: '/bi',           icon: BrainCircuit, label: 'B.I. Avançado',  section: 'reports',      extensionId: 'reports', isNew: true },
   ]},
   { group: 'Análises / Sistema', items: [
     { to: '/reports', icon: BarChart2, label: 'Relatórios', section: 'reports' },
