@@ -451,6 +451,29 @@ function ClienteModal({ tenant: base, planos, onClose, onSave, modoDemo }) {
                 })}
               </div>
 
+              {/* Módulos do plano */}
+              {planoAtual && (() => {
+                const mods = Array.isArray(planoAtual.modulos)
+                  ? planoAtual.modulos
+                  : (typeof planoAtual.modulos === 'string' ? JSON.parse(planoAtual.modulos || '[]') : []);
+                return mods.length > 0 && (
+                  <div style={{ background:'#0f0f10', border:'1px solid #2d2d35', borderRadius:10, padding:'14px 18px', marginBottom:0 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                      <p style={{ color:'#9ca3af', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Módulos do plano</p>
+                      <span style={{ fontSize:11, color:'#7c3aed', fontWeight:700 }}>{mods.length} módulos</span>
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
+                      {mods.map((m, i) => (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <Check size={11} color="#7c3aed" style={{ flexShrink:0 }} />
+                          <span style={{ color:'#d1d5db', fontSize:11 }}>{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {notas && (
                 <div style={{ background:'rgba(124,58,237,0.05)', border:'1px solid rgba(124,58,237,0.15)', borderRadius:8, padding:14 }}>
                   <p style={{ color:'#a78bfa', fontSize:11, fontWeight:700, marginBottom:6 }}>📝 NOTAS INTERNAS</p>

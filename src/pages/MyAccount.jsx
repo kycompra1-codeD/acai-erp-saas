@@ -547,6 +547,52 @@ export default function MyAccount() {
                 </div>
               </div>
 
+              {/* Detalhes do Plano Atual */}
+              {(() => {
+                const planoAtual = planos.find(p =>
+                  p.nome === (assinatura?.plano_nome || empresa?.plano_nome)
+                );
+                if (!planoAtual) return null;
+                const modulosArr = Array.isArray(planoAtual.modulos)
+                  ? planoAtual.modulos
+                  : (typeof planoAtual.modulos === 'string' ? JSON.parse(planoAtual.modulos || '[]') : []);
+                return (
+                  <div style={{ marginBottom: '32px', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Módulos incluídos no seu plano
+                      </h3>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', background: 'rgba(124,58,237,0.1)', padding: '3px 10px', borderRadius: 20 }}>
+                        {modulosArr.length} módulo{modulosArr.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div style={{ padding: '16px 20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px', marginBottom: '16px' }}>
+                        {modulosArr.map((m, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: '8px' }}>
+                            <Check size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: '12px', fontWeight: 600 }}>{m}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: '20px', paddingTop: '12px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                        {[
+                          { label: 'Usuários', value: planoAtual.max_usuarios === 9999 ? 'Ilimitado' : planoAtual.max_usuarios },
+                          { label: 'Filiais', value: planoAtual.max_filiais === 9999 ? 'Ilimitado' : planoAtual.max_filiais },
+                          { label: 'Produtos', value: planoAtual.max_produtos >= 99999 ? 'Ilimitado' : planoAtual.max_produtos?.toLocaleString('pt-BR') },
+                          { label: 'Trial', value: `${planoAtual.trial_dias} dias` },
+                        ].map(({ label, value }) => value != null && (
+                          <div key={label}>
+                            <p style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</p>
+                            <p style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Histórico de Faturas */}
               <div style={{ marginBottom: '40px' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: '16px' }}>Histórico de Faturas</h3>
