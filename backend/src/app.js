@@ -45,10 +45,10 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Rate limit mais agressivo para rotas de auth
+// Rate limit para rotas de auth
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos.' },
 });
 
