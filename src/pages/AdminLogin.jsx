@@ -4,7 +4,15 @@ import { Shield, Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackend } from '../services/api';
 
-const API = import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api';
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3001/api';
+  }
+  return 'https://api.zullya.com.br/api';
+};
+
+const API = getBaseUrl();
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
