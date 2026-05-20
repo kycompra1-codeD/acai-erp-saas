@@ -52,29 +52,21 @@ export function AuthProvider({ children }) {
   // ── Inicialização: restaurar sessão salva ──────────────────
   useEffect(() => {
     const init = async () => {
-      const online = await checkBackend();
-      setBackendOnline(online);
+      // Verifica health em paralelo — não bloqueia a restauração de sessão
+      checkBackend().then(online => setBackendOnline(online));
 
-      if (online) {
-        // Tentar restaurar sessão via token salvo
-        const token = localStorage.getItem('zullya_access_token');
-        if (token) {
-          try {
-            const dados = await authApi.me();
-            _setSession(dados, false);
-          } catch {
-            // Token inválido/expirado — sessão limpa
-            localStorage.removeItem('zullya_access_token');
-            localStorage.removeItem('zullya_refresh_token');
-          }
+      const token = localStorage.getItem('zullya_access_token');
+      if (token) {
+        try {
+          const dados = await authApi.me();
+          _setSession(dados, false);
+          setBackendOnline(true);
+        } catch {
+          // Token inválido/expirado — sessão limpa
+          localStorage.removeItem('zullya_access_token');
+          localStorage.removeItem('zullya_refresh_token');
+          localStorage.removeItem('zullya_auth');
         }
-      } else {
-        // Backend offline — limpar qualquer sessão local para evitar simulações
-        localStorage.removeItem('zullya_auth');
-        localStorage.removeItem('zullya_access_token');
-        localStorage.removeItem('zullya_refresh_token');
-        setUser(null);
-        setModoDemo(false);
       }
 
       setLoading(false);
@@ -84,8 +76,6 @@ export function AuthProvider({ children }) {
 
   // ── Helper: definir sessão após login/registro ─────────────
   const _setSession = (dados, isDemo = false) => {
-    // Normaliza tanto o formato do /me (dados direto) quanto do login (dados.usuario)
-    const raw = dados.usuario ? dados : { ...dados, ...dados };
     const userObj = {
       id: dados.usuario?.id || dados.id,
       nome: dados.usuario?.nome || dados.nome,
@@ -115,28 +105,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Helper: decodifica JWT do Google sem verificação (apenas para dados do perfil) ──
-  const _decodeGoogleJwt = (token) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(
-        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-      );
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
-  };
-
   // ── Login Google ───────────────────────────────────────────
   const loginGoogle = async (credential) => {
-    // Se o backend estiver offline, proibir login via Google
-    if (!backendOnline) {
-      return { sucesso: false, mensagem: 'O servidor da API está temporariamente offline. Não é possível fazer login com o Google no momento.' };
-    }
-
-    // ── Backend online → fluxo normal ──
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.zullya.com.br/api'}/auth/google`, {
         method: 'POST',
@@ -153,6 +123,7 @@ export function AuthProvider({ children }) {
 
       localStorage.setItem('zullya_access_token', data.dados.access_token);
       localStorage.setItem('zullya_refresh_token', data.dados.refresh_token);
+      setBackendOnline(true);
       _setSession(data.dados, false);
       return { sucesso: true };
     } catch (err) {

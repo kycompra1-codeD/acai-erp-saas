@@ -63,25 +63,20 @@ export default function Subscription() {
   useEffect(() => {
     const carregar = async () => {
       setLoading(true);
-      try {
-        const [planosRes, assinaturaRes, faturasRes, perfilRes] = await Promise.all([
-          fetch(`${API}/pagamentos/planos`).then(r => r.json()),
-          authFetch('/pagamentos/minha-assinatura'),
-          authFetch('/pagamentos/faturas'),
-          authFetch('/tenants/perfil'),
-        ]);
-        if (planosRes.sucesso) setPlanos(planosRes.dados);
-        if (assinaturaRes.sucesso) setAssinatura(assinaturaRes.dados);
-        if (faturasRes.sucesso) setFaturas(faturasRes.dados);
-        if (perfilRes.sucesso && perfilRes.dados) {
-          setDesconto(parseFloat(perfilRes.dados.desconto_percentual || 0));
-          setAcessoGratuito(!!perfilRes.dados.acesso_gratuito);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+      const [planosRes, assinaturaRes, faturasRes, perfilRes] = await Promise.allSettled([
+        fetch(`${API}/pagamentos/planos`).then(r => r.json()),
+        authFetch('/pagamentos/minha-assinatura'),
+        authFetch('/pagamentos/faturas'),
+        authFetch('/tenants/perfil'),
+      ]);
+      if (planosRes.status === 'fulfilled' && planosRes.value.sucesso) setPlanos(planosRes.value.dados);
+      if (assinaturaRes.status === 'fulfilled' && assinaturaRes.value.sucesso) setAssinatura(assinaturaRes.value.dados);
+      if (faturasRes.status === 'fulfilled' && faturasRes.value.sucesso) setFaturas(faturasRes.value.dados);
+      if (perfilRes.status === 'fulfilled' && perfilRes.value.sucesso && perfilRes.value.dados) {
+        setDesconto(parseFloat(perfilRes.value.dados.desconto_percentual || 0));
+        setAcessoGratuito(!!perfilRes.value.dados.acesso_gratuito);
       }
+      setLoading(false);
     };
     carregar();
   }, []);
