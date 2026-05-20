@@ -48,31 +48,36 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Rate limit login por E-MAIL (não por IP): cada conta tem sua própria janela.
-// Isso evita que o proxy/Nginx agrupe todos os usuários no mesmo IP e bloqueie todo mundo.
+// Rate limit login por E-MAIL: cada conta tem sua própria janela independente.
+// 50 falhas por e-mail em 1 hora — praticamente impossível de atingir legitimamente.
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 15,
+  windowMs: 60 * 60 * 1000,
+  max: 50,
   skipSuccessfulRequests: true,
-  // req.body já foi parseado antes deste middleware
-  keyGenerator: (req) => (req.body?.email || '').toLowerCase().trim() || req.ip,
-  message: { sucesso: false, mensagem: 'Muitas tentativas de login nesta conta. Aguarde 15 minutos ou use "Esqueci minha senha".' },
+  keyGenerator: (req) => {
+    const email = (req.body?.email || '').toLowerCase().trim();
+    return email || req.ip;
+  },
+  message: { sucesso: false, mensagem: 'Muitas tentativas de login nesta conta. Aguarde 1 hora ou use "Esqueci minha senha".' },
 });
 
-// Rate limit Google OAuth por IP (email não disponível antes de decodificar o token)
+// Rate limit Google OAuth por IP — limite alto para suportar muitos usuários via Nginx.
 const googleLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 500,
   skipSuccessfulRequests: true,
   message: { sucesso: false, mensagem: 'Muitas tentativas. Aguarde 15 minutos.' },
 });
 
-// Rate limit registro por e-mail: evita spam de cadastros no mesmo e-mail
+// Rate limit registro por e-mail: evita spam de cadastros.
 const registroLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: 20,
   skipSuccessfulRequests: true,
-  keyGenerator: (req) => (req.body?.email || '').toLowerCase().trim() || req.ip,
+  keyGenerator: (req) => {
+    const email = (req.body?.email || '').toLowerCase().trim();
+    return email || req.ip;
+  },
   message: { sucesso: false, mensagem: 'Muitos cadastros com este e-mail. Tente novamente em 1 hora.' },
 });
 
