@@ -442,11 +442,12 @@ router.post('/google', async (req, res) => {
       }
 
       if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+        const received = payload.aud ? `${payload.aud.substring(0, 10)}...` : 'null';
+        const expected = process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...` : 'null';
         console.error('❌ Google audience mismatch:', { payload: payload.aud, env: process.env.GOOGLE_CLIENT_ID });
         return res.status(401).json({
           sucesso: false,
-          mensagem: 'Erro de configuração Google. Contate o suporte.',
-          debug: process.env.NODE_ENV !== 'production' ? `AUD mismatch: ${payload.aud} vs ${process.env.GOOGLE_CLIENT_ID}` : undefined
+          mensagem: `Erro de configuração Google: AUD mismatch (Rec: ${received} | Exp: ${expected}). Verifique o CLIENT_ID na VPS.`,
         });
       }
 
