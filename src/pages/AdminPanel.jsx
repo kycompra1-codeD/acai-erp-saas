@@ -1383,37 +1383,28 @@ export default function AdminPanel() {
     }
   }, []);
 
-  // Inicialização com detecção de rede
+  // Inicialização: verifica token e carrega dados
   useEffect(() => {
-    const init = async () => {
-      const token = localStorage.getItem('zullya_admin_token');
-      if (!token || token === 'demo-admin-token') {
-        localStorage.removeItem('zullya_admin_token');
-        localStorage.removeItem('zullya_admin');
-        navigate('/admin/login');
-        return;
-      }
+    const token = localStorage.getItem('zullya_admin_token');
+    if (!token || token === 'demo-admin-token') {
+      localStorage.removeItem('zullya_admin_token');
+      localStorage.removeItem('zullya_admin');
+      navigate('/admin/login');
+      return;
+    }
+    setModoDemo(false);
+    Promise.all([
+      carregarStats(false),
+      carregarTenants(false),
+      carregarPlanos(false),
+    ]).finally(() => setLoading(false));
+  }, []);
 
-      const online = await checkBackend();
-      setModoDemo(false);
-      
-      if (!online) {
-        toast.error('Erro de conexão com a API na VPS Hostinger.', { icon: '⚠️' });
-        navigate('/admin/login');
-        return;
-      }
-
-      // Carregar
-      await Promise.all([
-        carregarStats(false),
-        carregarTenants(false),
-        carregarPlanos(false)
-      ]);
-      setLoading(false);
-    };
-
-    init();
-  }, [navigate, busca, filtroStatus, carregarStats, carregarTenants, carregarPlanos]);
+  // Recarregar tenants quando filtros mudam
+  useEffect(() => {
+    if (loading) return;
+    carregarTenants(false);
+  }, [busca, filtroStatus]);
 
   const logout = () => {
     localStorage.removeItem('zullya_admin_token');
