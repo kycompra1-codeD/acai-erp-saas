@@ -48,28 +48,32 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Rate limit para login email/senha: máx 50 falhas / 15 min (sucessos não contam)
+// Rate limit login por E-MAIL (não por IP): cada conta tem sua própria janela.
+// Isso evita que o proxy/Nginx agrupe todos os usuários no mesmo IP e bloqueie todo mundo.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 15,
   skipSuccessfulRequests: true,
-  message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos ou use "Esqueci minha senha".' },
+  // req.body já foi parseado antes deste middleware
+  keyGenerator: (req) => (req.body?.email || '').toLowerCase().trim() || req.ip,
+  message: { sucesso: false, mensagem: 'Muitas tentativas de login nesta conta. Aguarde 15 minutos ou use "Esqueci minha senha".' },
 });
 
-// Rate limit para Google OAuth: máx 60 por 15 min (sucessos não contam)
+// Rate limit Google OAuth por IP (email não disponível antes de decodificar o token)
 const googleLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 30,
   skipSuccessfulRequests: true,
   message: { sucesso: false, mensagem: 'Muitas tentativas. Aguarde 15 minutos.' },
 });
 
-// Rate limit para registro: máx 20 por hora
+// Rate limit registro por e-mail: evita spam de cadastros no mesmo e-mail
 const registroLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 5,
   skipSuccessfulRequests: true,
-  message: { sucesso: false, mensagem: 'Muitos cadastros. Tente novamente em 1 hora.' },
+  keyGenerator: (req) => (req.body?.email || '').toLowerCase().trim() || req.ip,
+  message: { sucesso: false, mensagem: 'Muitos cadastros com este e-mail. Tente novamente em 1 hora.' },
 });
 
 // ============================================================
