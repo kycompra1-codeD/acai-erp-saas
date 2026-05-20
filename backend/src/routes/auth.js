@@ -9,7 +9,6 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 const { enviarBoasVindas, enviarRedefinicaoSenha } = require('../services/emailService');
 
 const { OAuth2Client } = require('google-auth-library');
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 
@@ -425,12 +424,49 @@ router.post('/google', async (req, res) => {
   }
 
   try {
-    // Verificar token com Google
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const { sub: googleId, email, name, picture } = ticket.getPayload();
+    // Verificar token via Google tokeninfo — mais confiável que OAuth2Client local
+    // (evita problemas de cache de certificados rotativos do Google)
+    let googleId, email, name, picture;
+    try {
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+      );
+      const payload = await tokenInfoRes.json();
+
+      if (payload.error || !payload.sub) {
+        console.error('❌ Google tokeninfo erro:', payload.error, payload.error_description || '');
+        return res.status(401).json({
+          sucesso: false,
+          mensagem: 'Sessão Google expirada. Clique novamente no botão "Entrar com Google".',
+        });
+      }
+
+      if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+        console.error('❌ Google audience mismatch:', payload.aud);
+        return res.status(401).json({
+          sucesso: false,
+          mensagem: 'Erro de configuração Google. Contate o suporte.',
+        });
+      }
+
+      googleId = payload.sub;
+      email    = payload.email;
+      name     = payload.name;
+      picture  = payload.picture;
+    } catch (fetchErr) {
+      // Fallback: tentar via SDK local (nova instância por request = sem cache stale)
+      console.warn('⚠️  tokeninfo falhou, tentando SDK:', fetchErr.message);
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const p = ticket.getPayload();
+      googleId = p.sub;
+      email    = p.email;
+      name     = p.name;
+      picture  = p.picture;
+    }
 
     const googleUserSelect = `
       SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
@@ -514,14 +550,10 @@ router.post('/google', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Erro no login Google:', err.message);
-    const msg = err.message?.includes('Token used too late') || err.message?.includes('expired')
-      ? 'Sessão Google expirada. Clique novamente no botão "Entrar com Google".'
-      : err.message?.includes('audience') || err.message?.includes('Wrong recipient')
-      ? 'Erro de configuração Google. Contate o suporte.'
-      : err.message?.includes('Wrong number of segments') || err.message?.includes('invalid')
-      ? 'Token Google inválido. Clique novamente no botão "Entrar com Google".'
-      : 'Erro ao verificar conta Google. Tente novamente.';
-    return res.status(401).json({ sucesso: false, mensagem: msg });
+    return res.status(401).json({
+      sucesso: false,
+      mensagem: 'Erro ao verificar conta Google. Tente novamente.',
+    });
   }
 });
 
