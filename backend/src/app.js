@@ -130,6 +130,31 @@ const healthHandler = (req, res) => {
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
+// ROTA DE DIAGNÓSTICO TEMPORÁRIA
+app.get('/api/debug-status', async (req, res) => {
+  try {
+    const { rows: adminCount } = await query('SELECT COUNT(*) FROM admins');
+    const { rows: userCount } = await query('SELECT COUNT(*) FROM usuarios');
+    const { rows: dbName } = await query('SELECT current_database()');
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      build_id: 'DEBUG_V3', // Incrementado para confirmar o deploy
+      postgres: 'connected',
+      database: dbName[0].current_database,
+      counts: {
+        admins: parseInt(adminCount[0].count),
+        usuarios: parseInt(userCount[0].count)
+      },
+      env: {
+        google_client_id: process.env.GOOGLE_CLIENT_ID ? 'SET (starts with ' + process.env.GOOGLE_CLIENT_ID.substring(0, 10) + '...)' : 'MISSING'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/login', loginLimiter);
 app.post('/api/auth/google', googleLimiter);
 app.post('/api/auth/registro', registroLimiter);
