@@ -26,8 +26,8 @@ export const PERMISSIONS = {
     'customers', 'reports', 'kitchen', 'employees', 'sales',
   ],
   vendedor: ['dashboard', 'pos', 'orders', 'customers', 'sales'],
-  caixa:    ['dashboard', 'pos', 'orders', 'customers', 'kitchen', 'sales'],
-  estoque:  ['dashboard', 'inventory', 'products', 'suppliers'],
+  caixa: ['dashboard', 'pos', 'orders', 'customers', 'kitchen', 'sales'],
+  estoque: ['dashboard', 'inventory', 'products', 'suppliers'],
   financeiro: ['dashboard', 'finance', 'reports', 'sales'],
   operador: ['dashboard', 'pos', 'orders', 'kitchen'],
   // Modo demo (quando backend indisponível)
@@ -192,16 +192,14 @@ export function AuthProvider({ children }) {
 
   // ── Login ──────────────────────────────────────────────────
   const login = async (email, password) => {
-
     if (!backendOnline) {
-      return { 
-        sucesso: false, 
-        mensagem: "O servidor está temporariamente offline. Não foi possível conectar à API de produção." 
-      };
+      console.warn("Tentando login mesmo com check de backend falho...");
     }
 
     try {
       const dados = await authApi.login(email, password);
+      // Se o login funcionar, é porque o backend está online de fato
+      setBackendOnline(true);
       _setSession(dados, false);
       return { sucesso: true };
     } catch (err) {

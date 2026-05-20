@@ -320,11 +320,20 @@ export const automacoesApi = {
 // ============================================================
 // Health check (verifica se o backend está disponível)
 // ============================================================
-export const checkBackend = async () => {
-  try {
-    const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) });
-    return res.ok;
-  } catch {
-    return false;
+export const checkBackend = async (retries = 2) => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      // Timeout de 15s para dar tempo da VPS/API responder se estiver "fria"
+      const res = await fetch(`${API_URL}/health`, {
+        signal: AbortSignal.timeout(15000)
+      });
+      if (res.ok) return true;
+    } catch (err) {
+      console.warn(`Tentativa ${i + 1} de health check falhou:`, err.message);
+      if (i === retries) return false;
+      // Espera 1s antes de tentar novamente (backoff simples)
+      await new Promise(r => setTimeout(r, 1000));
+    }
   }
+  return false;
 };

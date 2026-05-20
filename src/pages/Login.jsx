@@ -143,7 +143,7 @@ export default function Login() {
         }}>
           {backendOnline
             ? <><Wifi size={12} /> API Online — login real ativado</>
-            : <><WifiOff size={12} /> Servidor Offline — login temporariamente indisponível</>
+            : <><WifiOff size={12} /> Servidor Instável — tentando conectar... (login ainda disponível)</>
           }
         </div>
 

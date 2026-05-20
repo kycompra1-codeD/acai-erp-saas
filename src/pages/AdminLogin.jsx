@@ -14,12 +14,16 @@ export default function AdminLogin() {
   const [backendOnline, setBackendOnline] = useState(true);
   const navigate = useNavigate();
 
+  const check = async () => {
+    setLoading(true);
+    const online = await checkBackend();
+    setBackendOnline(online);
+    setLoading(false);
+    if (online) toast.success('API conectada!');
+  };
+
   // Verificar estado do backend
   useEffect(() => {
-    const check = async () => {
-      const online = await checkBackend();
-      setBackendOnline(online);
-    };
     check();
   }, []);
 
@@ -41,9 +45,10 @@ export default function AdminLogin() {
       }
       localStorage.setItem('zullya_admin_token', data.dados.token);
       localStorage.setItem('zullya_admin', JSON.stringify(data.dados.admin));
+      setBackendOnline(true);
       navigate('/admin');
-    } catch {
-      toast.error('Servidor indisponível. Verifique se a API na VPS está ativa.');
+    } catch (err) {
+      toast.error('Erro de conexão. A API pode estar demorando a responder ou a VPS está offline.');
     } finally {
       setLoading(false);
     }
@@ -86,11 +91,21 @@ export default function AdminLogin() {
             display: 'flex', alignItems: 'flex-start', gap: 10
           }}>
             <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-            <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 2 }}>Servidor da VPS Off-line</p>
-              <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4 }}>
-                Não foi possível conectar com o servidor da API. Verifique sua conexão ou se a API na VPS está ativa.
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', marginBottom: 2 }}>Servidor da VPS Instável</p>
+              <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4, marginBottom: 8 }}>
+                O sistema não conseguiu confirmar se a API está online. Você pode tentar entrar assim mesmo.
               </p>
+              <button
+                type="button"
+                onClick={check}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#fff', fontSize: 10, padding: '4px 8px', borderRadius: 4, cursor: 'pointer'
+                }}
+              >
+                Verificar novamente
+              </button>
             </div>
           </div>
         )}
