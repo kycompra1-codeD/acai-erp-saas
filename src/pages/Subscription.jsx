@@ -207,7 +207,7 @@ export default function Subscription() {
                 <h3 className="text-sm font-bold text-muted uppercase tracking-wider">Pagamento</h3>
                 <CreditCard size={18} className="text-primary-light" />
               </div>
-              {assinatura?.mp_subscription_id ? (
+              {assinatura?.gateway_subscription_id || assinatura?.gateway_payment_id ? (
                 <div className="flex items-center gap-3 p-3 bg-surface-2 rounded-lg border border-border">
                   <div className="w-10 h-6 bg-[#00aeef] rounded flex items-center justify-center">
                     <span className="text-[9px] font-black text-white">MP</span>

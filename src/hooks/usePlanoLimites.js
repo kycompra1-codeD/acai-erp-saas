@@ -26,7 +26,7 @@ export function usePlanoLimites() {
       if (!modulosPermitidos || modulosPermitidos.length === 0) return true;
       return modulosPermitidos.includes(modulo);
     },
-    maxUsuarios: empresa?.plano?.max_usuarios ?? 3,
+    maxUsuarios: empresa?.max_usuarios ?? 3,
     modulosPermitidos,
     planoNome: empresa?.plano_nome || empresa?.plano?.nome || 'Starter',
   };

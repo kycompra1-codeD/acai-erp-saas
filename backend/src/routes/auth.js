@@ -102,6 +102,13 @@ router.post('/registro', [
       // Enviar e-mail de boas-vindas (não bloqueia a resposta)
       enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => {});
 
+      // Buscar dados do plano para retornar na resposta
+      const { rows: planoInfo } = await client.query(
+        'SELECT id, nome, modulos, max_usuarios, max_produtos FROM planos WHERE id = $1',
+        [plano_id]
+      );
+      const plano = planoInfo[0] || {};
+
       return res.status(201).json({
         sucesso: true,
         mensagem: 'Empresa criada com sucesso! Seu período de trial de 14 dias começou.',
@@ -109,7 +116,17 @@ router.post('/registro', [
           access_token: accessToken,
           refresh_token: refreshToken,
           usuario: { id: usuario_id, nome, email, nivel_permissao: 'master' },
-          empresa: { id: tenant_id, nome_empresa, status: 'trial' },
+          empresa: {
+            id: tenant_id,
+            nome_empresa,
+            status: 'trial',
+            trial_expira_em: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            plano_id: plano.id || null,
+            plano_nome: plano.nome || 'Starter',
+            modulos: plano.modulos || [],
+            max_usuarios: plano.max_usuarios || 3,
+            max_produtos: plano.max_produtos || 500,
+          },
         },
       });
     });
@@ -137,12 +154,14 @@ router.post('/login', [
   const { email, senha, tenant_id } = req.body;
 
   try {
-    // Buscar usuário
+    // Buscar usuário com dados completos do plano
     let queryText = `
       SELECT u.id, u.nome, u.email, u.senha_hash, u.nivel_permissao, u.ativo,
-             u.tenant_id, t.nome_empresa, t.status as tenant_status
+             u.tenant_id, t.nome_empresa, t.status as tenant_status, t.trial_expira_em,
+             p.id as plano_id, p.nome as plano_nome, p.modulos, p.max_usuarios, p.max_produtos
       FROM usuarios u
       JOIN tenants t ON t.id = u.tenant_id
+      LEFT JOIN planos p ON p.id = t.plano_id
       WHERE u.email = $1 AND u.ativo = true
     `;
     const queryParams = [email];
@@ -209,6 +228,12 @@ router.post('/login', [
           id: usuario.tenant_id,
           nome_empresa: usuario.nome_empresa,
           status: usuario.tenant_status,
+          trial_expira_em: usuario.trial_expira_em,
+          plano_id: usuario.plano_id,
+          plano_nome: usuario.plano_nome,
+          modulos: usuario.modulos,
+          max_usuarios: usuario.max_usuarios,
+          max_produtos: usuario.max_produtos,
         },
       },
     });
@@ -407,24 +432,25 @@ router.post('/google', async (req, res) => {
     });
     const { sub: googleId, email, name, picture } = ticket.getPayload();
 
+    const googleUserSelect = `
+      SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
+             u.tenant_id, t.nome_empresa, t.status as tenant_status, t.trial_expira_em,
+             p.id as plano_id, p.nome as plano_nome, p.modulos, p.max_usuarios, p.max_produtos
+      FROM usuarios u
+      JOIN tenants t ON t.id = u.tenant_id
+      LEFT JOIN planos p ON p.id = t.plano_id
+    `;
+
     // Buscar usuário por google_id
     let { rows } = await query(
-      `SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
-              u.tenant_id, t.nome_empresa, t.status as tenant_status
-       FROM usuarios u
-       JOIN tenants t ON t.id = u.tenant_id
-       WHERE u.google_id = $1 AND u.ativo = true LIMIT 1`,
+      `${googleUserSelect} WHERE u.google_id = $1 AND u.ativo = true LIMIT 1`,
       [googleId]
     );
 
     // Não encontrou pelo google_id → tentar vincular pelo email
     if (rows.length === 0) {
       const byEmail = await query(
-        `SELECT u.id, u.nome, u.email, u.nivel_permissao, u.ativo,
-                u.tenant_id, t.nome_empresa, t.status as tenant_status
-         FROM usuarios u
-         JOIN tenants t ON t.id = u.tenant_id
-         WHERE u.email = $1 AND u.ativo = true LIMIT 1`,
+        `${googleUserSelect} WHERE u.email = $1 AND u.ativo = true LIMIT 1`,
         [email]
       );
 
@@ -473,7 +499,17 @@ router.post('/google', async (req, res) => {
         access_token: accessToken,
         refresh_token: refreshToken,
         usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, nivel_permissao: usuario.nivel_permissao },
-        empresa: { id: usuario.tenant_id, nome_empresa: usuario.nome_empresa, status: usuario.tenant_status },
+        empresa: {
+          id: usuario.tenant_id,
+          nome_empresa: usuario.nome_empresa,
+          status: usuario.tenant_status,
+          trial_expira_em: usuario.trial_expira_em,
+          plano_id: usuario.plano_id,
+          plano_nome: usuario.plano_nome,
+          modulos: usuario.modulos,
+          max_usuarios: usuario.max_usuarios,
+          max_produtos: usuario.max_produtos,
+        },
       },
     });
   } catch (err) {
@@ -514,8 +550,11 @@ router.post('/registro-google', [
         throw { status: 409, mensagem: 'Este e-mail já está cadastrado. Faça login normalmente.' };
       }
 
-      const { rows: planos } = await client.query("SELECT id FROM planos WHERE nome = 'Starter' LIMIT 1");
-      const plano_id = planos[0]?.id || null;
+      const { rows: planos } = await client.query(
+        "SELECT id, nome, modulos, max_usuarios, max_produtos FROM planos WHERE nome = 'Starter' LIMIT 1"
+      );
+      const plano = planos[0] || {};
+      const plano_id = plano.id || null;
 
       const { rows: tenantRows } = await client.query(
         `INSERT INTO tenants (nome_empresa, cnpj, email_contato, telefone, plano_id, status)
@@ -550,7 +589,17 @@ router.post('/registro-google', [
           access_token: accessToken,
           refresh_token: refreshToken,
           usuario: { id: usuario_id, nome, email, nivel_permissao: 'master' },
-          empresa: { id: tenant_id, nome_empresa, status: 'trial' },
+          empresa: {
+            id: tenant_id,
+            nome_empresa,
+            status: 'trial',
+            trial_expira_em: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            plano_id: plano.id || null,
+            plano_nome: plano.nome || 'Starter',
+            modulos: plano.modulos || [],
+            max_usuarios: plano.max_usuarios || 3,
+            max_produtos: plano.max_produtos || 500,
+          },
         },
       });
     });

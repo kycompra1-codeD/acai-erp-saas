@@ -22,7 +22,7 @@ router.get('/perfil', authMiddleware, async (req, res) => {
               regime_tributario, telefone, email_contato, email_comercial, logo_url,
               cep, logradouro, numero, complemento, bairro, cidade, estado,
               responsavel_nome, responsavel_email, responsavel_celular,
-              status, plano_id, trial_expira_em, criado_em, atualizado_em
+              status, plano_id, trial_expira_em, modulos_override, criado_em, atualizado_em
        FROM tenants WHERE id = $1`,
       [req.usuario.tenant_id]
     );

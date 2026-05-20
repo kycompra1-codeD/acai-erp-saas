@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { query, withTransaction } = require('../db/connection');
+const { query } = require('../db/connection');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -50,7 +50,7 @@ router.get('/minha-assinatura', authMiddleware, async (req, res) => {
   try {
     const { rows } = await query(`
       SELECT a.id, a.status, a.periodo, a.valor, a.proximo_vencimento,
-             a.criado_em, a.mp_subscription_id,
+             a.criado_em, a.gateway_subscription_id, a.gateway_payment_id,
              p.nome as plano_nome, p.valor_mensal, p.valor_anual,
              t.status as tenant_status, t.trial_expira_em
       FROM assinaturas a
@@ -59,7 +59,7 @@ router.get('/minha-assinatura', authMiddleware, async (req, res) => {
       WHERE a.tenant_id = $1
       ORDER BY a.criado_em DESC
       LIMIT 1
-    `, [req.tenant_id]);
+    `, [req.usuario.tenant_id]);
 
     if (rows.length === 0) {
       return res.json({ sucesso: true, dados: null });
@@ -78,15 +78,15 @@ router.get('/faturas', authMiddleware, async (req, res) => {
   try {
     const { rows } = await query(`
       SELECT a.id, a.status, a.periodo, a.valor, a.criado_em,
-             a.proximo_vencimento, a.mp_payment_id,
+             a.proximo_vencimento, a.gateway_payment_id,
              p.nome as plano_nome
       FROM assinaturas a
       JOIN planos p ON p.id = a.plano_id
       WHERE a.tenant_id = $1
-        AND a.status IN ('ativa','trial')
+        AND a.status IN ('ativa', 'trial')
       ORDER BY a.criado_em DESC
       LIMIT 24
-    `, [req.tenant_id]);
+    `, [req.usuario.tenant_id]);
 
     return res.json({ sucesso: true, dados: rows });
   } catch (err) {
@@ -115,6 +115,7 @@ router.post('/checkout', authMiddleware, [
   }
 
   const { plano_id, periodo, metodo } = req.body;
+  const { tenant_id, id: usuario_id } = req.usuario;
 
   try {
     // Buscar plano
@@ -132,7 +133,7 @@ router.post('/checkout', authMiddleware, [
       `SELECT u.nome, u.email, t.nome_empresa
        FROM usuarios u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1`,
-      [req.usuario_id]
+      [usuario_id]
     );
     const user = usuarios[0];
 
@@ -151,9 +152,9 @@ router.post('/checkout', authMiddleware, [
           description: descricao,
           payment_method_id: 'pix',
           payer: { email: user.email, first_name: user.nome },
-          external_reference: req.tenant_id,
+          external_reference: tenant_id,
           metadata: {
-            tenant_id: req.tenant_id,
+            tenant_id,
             plano_id,
             periodo,
           },
@@ -185,8 +186,8 @@ router.post('/checkout', authMiddleware, [
           currency_id: 'BRL',
         }],
         payer: { email: user.email, name: user.nome },
-        external_reference: req.tenant_id,
-        metadata: { tenant_id: req.tenant_id, plano_id, periodo },
+        external_reference: tenant_id,
+        metadata: { tenant_id, plano_id, periodo },
         back_urls: {
           success: `${APP_URL}/assinatura?pagamento=aprovado`,
           failure: `${APP_URL}/assinatura?pagamento=falhou`,
