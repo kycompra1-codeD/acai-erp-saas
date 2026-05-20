@@ -29,14 +29,14 @@ router.post('/auth/login', [
 
     if (rows.length === 0 || !rows[0].ativo) {
       console.error('❌ Admin login falhou: e-mail não encontrado ou inativo:', email);
-      return res.status(401).json({ sucesso: false, mensagem: 'DEBUG: Admin não encontrado ou inativo.' });
+      return res.status(401).json({ sucesso: false, mensagem: 'Credenciais inválidas.' });
     }
 
     const admin = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, admin.senha_hash);
     if (!senhaCorreta) {
       console.error('❌ Admin login falhou: senha incorreta para:', email);
-      return res.status(401).json({ sucesso: false, mensagem: 'DEBUG: Senha incorreta.' });
+      return res.status(401).json({ sucesso: false, mensagem: 'Credenciais inválidas.' });
     }
 
     await query('UPDATE admins SET ultimo_acesso = NOW() WHERE id = $1', [admin.id]);
