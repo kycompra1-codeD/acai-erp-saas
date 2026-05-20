@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Check, Zap, Crown, ShieldCheck, ArrowRight,
-  TrendingUp, Globe, Truck, Users, CreditCard,
-  FileText, Loader2, AlertCircle, Clock,
+  Users, CreditCard, Loader2, Clock, Tag, Gift,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CheckoutModal from '../components/CheckoutModal';
@@ -43,6 +41,8 @@ export default function Subscription() {
   const [faturas, setFaturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [desconto, setDesconto] = useState(0);
+  const [acessoGratuito, setAcessoGratuito] = useState(false);
 
   // Verificar retorno do Mercado Pago
   useEffect(() => {
@@ -64,14 +64,19 @@ export default function Subscription() {
     const carregar = async () => {
       setLoading(true);
       try {
-        const [planosRes, assinaturaRes, faturasRes] = await Promise.all([
+        const [planosRes, assinaturaRes, faturasRes, perfilRes] = await Promise.all([
           fetch(`${API}/pagamentos/planos`).then(r => r.json()),
           authFetch('/pagamentos/minha-assinatura'),
           authFetch('/pagamentos/faturas'),
+          authFetch('/tenants/perfil'),
         ]);
         if (planosRes.sucesso) setPlanos(planosRes.dados);
         if (assinaturaRes.sucesso) setAssinatura(assinaturaRes.dados);
         if (faturasRes.sucesso) setFaturas(faturasRes.dados);
+        if (perfilRes.sucesso && perfilRes.dados) {
+          setDesconto(parseFloat(perfilRes.dados.desconto_percentual || 0));
+          setAcessoGratuito(!!perfilRes.dados.acesso_gratuito);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -288,17 +293,32 @@ export default function Subscription() {
               ? plan.modulos
               : (typeof plan.modulos === 'string' ? JSON.parse(plan.modulos || '[]') : []);
 
+            const valorOriginal = parseFloat(plan.valor_mensal || 0);
+            const valorComDesconto = acessoGratuito ? 0 : parseFloat((valorOriginal * (1 - desconto / 100)).toFixed(2));
+            const temDesconto = desconto > 0 || acessoGratuito;
+
             return (
               <div
                 key={plan.id}
                 className={`glass-card flex flex-col relative transition-all duration-300 hover-lift ${plan.destaque ? 'border-primary ring-1 ring-primary/30 scale-105 z-10' : ''}`}
                 style={{ padding: '40px 32px' }}
               >
-                {plan.destaque && (
+                {/* Badge Mais Popular */}
+                {plan.destaque && !temDesconto && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg">
                     Mais Popular
                   </div>
                 )}
+                {/* Badge de desconto exclusivo (substitui o "Mais Popular" quando há desconto) */}
+                {temDesconto && (
+                  <div
+                    className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1"
+                    style={{ background: acessoGratuito ? '#10b981' : 'linear-gradient(135deg, #7c3aed, #4f46e5)', whiteSpace: 'nowrap' }}
+                  >
+                    {acessoGratuito ? <><Gift size={10}/> Acesso Gratuito</> : <><Tag size={10}/> {desconto}% OFF Exclusivo</>}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 mb-6">
                   <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', color: 'var(--primary-light)' }}>
                     <PlanoIcon nome={plan.nome} />
@@ -310,15 +330,39 @@ export default function Subscription() {
                 </div>
 
                 <div className="mb-8">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-bold text-muted">R$</span>
-                    <span className="text-5xl font-black">{Math.floor(parseFloat(plan.valor_mensal))}</span>
-                    <span className="text-sm font-bold text-muted">,{(parseFloat(plan.valor_mensal) % 1 * 100).toFixed(0).padStart(2, '0')}/mês</span>
-                  </div>
-                  {plan.valor_anual && (
-                    <p className="text-xs text-success mt-1">
-                      R$ {parseFloat(plan.valor_anual).toFixed(2)}/ano (economia de 20%)
-                    </p>
+                  {temDesconto ? (
+                    <div>
+                      {/* Preço original riscado */}
+                      <div style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: 14, marginBottom: 2 }}>
+                        R$ {valorOriginal.toFixed(2).replace('.', ',')}/mês
+                      </div>
+                      {/* Preço com desconto destacado */}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold" style={{ color: acessoGratuito ? '#10b981' : '#7c3aed' }}>R$</span>
+                        <span className="text-5xl font-black" style={{ color: acessoGratuito ? '#10b981' : '#7c3aed' }}>
+                          {acessoGratuito ? '0' : Math.floor(valorComDesconto)}
+                        </span>
+                        <span className="text-sm font-bold" style={{ color: acessoGratuito ? '#10b981' : '#7c3aed' }}>
+                          {acessoGratuito ? ',00' : `,${((valorComDesconto % 1) * 100).toFixed(0).padStart(2, '0')}`}/mês
+                        </span>
+                      </div>
+                      <p className="text-xs mt-1 font-bold" style={{ color: acessoGratuito ? '#10b981' : '#7c3aed' }}>
+                        {acessoGratuito ? 'Plano gratuito por cortesia do Zullya ERP' : `Você economiza R$ ${(valorOriginal - valorComDesconto).toFixed(2).replace('.', ',')} por mês`}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-muted">R$</span>
+                        <span className="text-5xl font-black">{Math.floor(valorOriginal)}</span>
+                        <span className="text-sm font-bold text-muted">,{(valorOriginal % 1 * 100).toFixed(0).padStart(2, '0')}/mês</span>
+                      </div>
+                      {plan.valor_anual && (
+                        <p className="text-xs text-success mt-1">
+                          R$ {parseFloat(plan.valor_anual).toFixed(2)}/ano (economia de 20%)
+                        </p>
+                      )}
+                    </div>
                   )}
                   {plan.descricao && (
                     <p className="text-sm text-muted mt-3 leading-relaxed">{plan.descricao}</p>
@@ -342,9 +386,10 @@ export default function Subscription() {
 
                 <button
                   className={`btn btn-lg w-full font-black tracking-tight ${isCurrent ? 'btn-secondary' : 'btn-primary'}`}
+                  style={temDesconto && !isCurrent ? { background: acessoGratuito ? '#10b981' : undefined } : {}}
                   onClick={() => handleUpgrade(plan)}
                 >
-                  {isCurrent ? 'Plano Atual' : tenantStatus === 'trial' ? 'Assinar Agora' : 'Migrar para este plano'}
+                  {isCurrent ? 'Plano Atual' : acessoGratuito ? 'Ativar Gratuitamente' : tenantStatus === 'trial' ? 'Assinar Agora' : 'Migrar para este plano'}
                 </button>
               </div>
             );
@@ -366,6 +411,8 @@ export default function Subscription() {
           plan={selectedPlan}
           onClose={() => setSelectedPlan(null)}
           onSuccess={handleCheckoutSuccess}
+          desconto={desconto}
+          acessoGratuito={acessoGratuito}
         />
       )}
     </div>
