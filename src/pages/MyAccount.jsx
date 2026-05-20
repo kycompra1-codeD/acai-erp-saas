@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   User, Building2, MapPin, Shield, CreditCard, Upload, Save,
   Check, Zap, Crown, ShieldCheck, Loader2, Clock,
-  KeyRound, Eye, EyeOff
+  KeyRound, Eye, EyeOff, Users, Plus, Trash2, Edit3,
+  RefreshCw, X, ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CheckoutModal from '../components/CheckoutModal';
@@ -71,6 +72,16 @@ export default function MyAccount() {
   const [faturas, setFaturas] = useState([]);
   const [loadingAssinatura, setLoadingAssinatura] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+
+  // ── Usuários da empresa ───────────────────────────────────
+  const [usuariosList, setUsuariosList] = useState([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  const [showNovoUsuario, setShowNovoUsuario] = useState(false);
+  const [editandoUsuario, setEditandoUsuario] = useState(null);
+  const [novoUsuario, setNovoUsuario] = useState({ nome: '', email: '', senha: '', nivel_permissao: 'operador' });
+  const [salvandoUsuario, setSalvandoUsuario] = useState(false);
+  const [resetSenhaId, setResetSenhaId] = useState(null);
+  const [novaSenhaReset, setNovaSenhaReset] = useState('');
 
   // ── Carregar dados ao montar ──────────────────────────────
   useEffect(() => {
@@ -218,16 +229,89 @@ export default function MyAccount() {
     finally { setSavingEmpresa(false); }
   };
 
+  // ── Handlers de Usuários ──────────────────────────────────
+  const carregarUsuarios = async () => {
+    setLoadingUsuarios(true);
+    try {
+      const r = await authFetch('/usuarios');
+      if (r.sucesso) setUsuariosList(r.dados);
+    } catch {}
+    finally { setLoadingUsuarios(false); }
+  };
+
+  const handleCriarUsuario = async () => {
+    if (!novoUsuario.nome.trim()) { toast.error('Nome obrigatório'); return; }
+    if (!novoUsuario.email.trim()) { toast.error('E-mail obrigatório'); return; }
+    if (novoUsuario.senha.length < 8) { toast.error('Senha: mínimo 8 caracteres'); return; }
+    setSalvandoUsuario(true);
+    try {
+      const r = await authFetch('/usuarios', {
+        method: 'POST',
+        body: JSON.stringify(novoUsuario),
+      });
+      if (r.sucesso) {
+        toast.success('Usuário criado com sucesso!');
+        setNovoUsuario({ nome: '', email: '', senha: '', nivel_permissao: 'operador' });
+        setShowNovoUsuario(false);
+        carregarUsuarios();
+      } else {
+        toast.error(r.mensagem || r.erros?.[0]?.msg || 'Erro ao criar usuário');
+      }
+    } catch { toast.error('Erro ao conectar'); }
+    finally { setSalvandoUsuario(false); }
+  };
+
+  const handleEditarUsuario = async (id, campos) => {
+    try {
+      const r = await authFetch(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(campos) });
+      if (r.sucesso) { toast.success('Usuário atualizado!'); carregarUsuarios(); setEditandoUsuario(null); }
+      else toast.error(r.mensagem || 'Erro ao atualizar');
+    } catch { toast.error('Erro ao conectar'); }
+  };
+
+  const handleDesativarUsuario = async (id, nome) => {
+    if (!window.confirm(`Desativar "${nome}"?`)) return;
+    try {
+      const r = await authFetch(`/usuarios/${id}`, { method: 'DELETE' });
+      if (r.sucesso) { toast.success(r.mensagem); carregarUsuarios(); }
+      else toast.error(r.mensagem || 'Erro ao desativar');
+    } catch { toast.error('Erro ao conectar'); }
+  };
+
+  const handleResetSenha = async () => {
+    if (novaSenhaReset.length < 8) { toast.error('Mínimo 8 caracteres'); return; }
+    try {
+      const r = await authFetch(`/usuarios/${resetSenhaId}/redefinir-senha`, {
+        method: 'POST',
+        body: JSON.stringify({ nova_senha: novaSenhaReset }),
+      });
+      if (r.sucesso) { toast.success(r.mensagem); setResetSenhaId(null); setNovaSenhaReset(''); }
+      else toast.error(r.mensagem || 'Erro ao redefinir senha');
+    } catch { toast.error('Erro ao conectar'); }
+  };
+
   const tenantStatus = empresa?.status || user?.empresa?.status || 'trial';
   const tenantStatusInfo = STATUS_LABEL[tenantStatus] || STATUS_LABEL.trial;
   const trialExpira = empresa?.trial_expira_em || assinatura?.trial_expira_em;
   const diasRestantes = trialExpira
     ? Math.max(0, Math.ceil((new Date(trialExpira) - new Date()) / (1000 * 60 * 60 * 24)))
     : null;
+  const maxUsuarios = empresa?.max_usuarios ?? 3;
+
+  const NIVEIS = [
+    { value: 'admin',      label: 'Admin' },
+    { value: 'gerente',    label: 'Gerente' },
+    { value: 'vendedor',   label: 'Vendedor' },
+    { value: 'caixa',      label: 'Caixa' },
+    { value: 'estoque',    label: 'Estoque' },
+    { value: 'financeiro', label: 'Financeiro' },
+    { value: 'operador',   label: 'Operador' },
+  ];
 
   const tabs = [
     { id: 'perfil',     label: 'Meu Perfil',          icon: User },
     { id: 'empresa',    label: 'Dados da Empresa',     icon: Building2 },
+    { id: 'usuarios',   label: 'Usuários',             icon: Users },
     { id: 'certificado',label: 'Certificado Digital',  icon: Shield },
     { id: 'assinatura', label: 'Assinatura e Planos',  icon: CreditCard },
   ];
@@ -272,7 +356,7 @@ export default function MyAccount() {
           <div className="card" style={{ padding: '8px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {tabs.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'usuarios') carregarUsuarios(); }} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                   borderRadius: 'var(--radius)', border: 'none',
                   background: activeTab === tab.id ? 'rgba(124,58,237,0.1)' : 'transparent',
@@ -551,6 +635,196 @@ export default function MyAccount() {
             </div>
           )}
 
+          {/* ━━ Usuários ━━ */}
+          {activeTab === 'usuarios' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Header com limite */}
+              <div className="card" style={{ padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Users size={18} color="var(--primary)" /> Usuários da Empresa
+                    </h2>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                      {usuariosList.length} de {maxUsuarios >= 999 ? 'ilimitados' : maxUsuarios} usuários usados
+                      {maxUsuarios < 999 && (
+                        <span style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                          background: usuariosList.length >= maxUsuarios ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                          color: usuariosList.length >= maxUsuarios ? '#ef4444' : '#10b981' }}>
+                          {usuariosList.length >= maxUsuarios ? 'Limite atingido' : `${maxUsuarios - usuariosList.length} disponíveis`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-ghost" onClick={carregarUsuarios} disabled={loadingUsuarios} title="Atualizar">
+                      <RefreshCw size={15} className={loadingUsuarios ? 'animate-spin' : ''} />
+                    </button>
+                    {usuariosList.length < maxUsuarios && (
+                      <button className="btn btn-primary" onClick={() => { setShowNovoUsuario(s => !s); setEditandoUsuario(null); }}
+                        style={{ gap: 6, fontSize: 13 }}>
+                        <Plus size={15} /> Novo Usuário
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Formulário de novo usuário */}
+              {showNovoUsuario && (
+                <div className="card" style={{ padding: 24, border: '1px solid var(--primary)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700 }}>Adicionar Usuário</h3>
+                    <button className="btn btn-ghost btn-icon" onClick={() => setShowNovoUsuario(false)}><X size={16} /></button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>NOME *</label>
+                      <input className="input" value={novoUsuario.nome} onChange={e => setNovoUsuario(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>E-MAIL *</label>
+                      <input className="input" type="email" value={novoUsuario.email} onChange={e => setNovoUsuario(p => ({ ...p, email: e.target.value }))} placeholder="email@empresa.com" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>SENHA * (mín. 8 chars)</label>
+                      <input className="input" type="password" value={novoUsuario.senha} onChange={e => setNovoUsuario(p => ({ ...p, senha: e.target.value }))} placeholder="••••••••" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>NÍVEL DE ACESSO</label>
+                      <select className="input" value={novoUsuario.nivel_permissao} onChange={e => setNovoUsuario(p => ({ ...p, nivel_permissao: e.target.value }))}>
+                        {NIVEIS.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                    <button className="btn btn-ghost" onClick={() => setShowNovoUsuario(false)}>Cancelar</button>
+                    <button className="btn btn-primary" onClick={handleCriarUsuario} disabled={salvandoUsuario}>
+                      {salvandoUsuario ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Criar Usuário
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de usuários */}
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {loadingUsuarios ? (
+                  <div style={{ padding: 48, textAlign: 'center' }}>
+                    <Loader2 size={28} className="animate-spin" style={{ color: 'var(--primary)', margin: '0 auto 12px' }} />
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Carregando usuários...</p>
+                  </div>
+                ) : usuariosList.length === 0 ? (
+                  <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <Users size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>Nenhum usuário encontrado</p>
+                    <p style={{ fontSize: 12, marginTop: 4 }}>Clique em "Novo Usuário" para adicionar.</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+                          {['Usuário', 'Nível', 'Último acesso', 'Status', 'Ações'].map(h => (
+                            <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usuariosList.map(u => (
+                          <tr key={u.id} style={{ borderBottom: '1px solid var(--border)', opacity: u.ativo ? 1 : 0.5 }}>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ fontWeight: 600 }}>{u.nome}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{u.email}</div>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              {editandoUsuario?.id === u.id ? (
+                                <select className="input" style={{ fontSize: 12, padding: '4px 8px' }}
+                                  value={editandoUsuario.nivel_permissao}
+                                  onChange={e => setEditandoUsuario(p => ({ ...p, nivel_permissao: e.target.value }))}>
+                                  {NIVEIS.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+                                </select>
+                              ) : (
+                                <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: 'rgba(124,58,237,0.1)', color: 'var(--primary)' }}>
+                                  {NIVEIS.find(n => n.value === u.nivel_permissao)?.label || u.nivel_permissao}
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {u.ultimo_acesso ? new Date(u.ultimo_acesso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                                background: u.ativo ? 'rgba(16,185,129,0.1)' : 'rgba(107,114,128,0.1)',
+                                color: u.ativo ? '#10b981' : '#6b7280' }}>
+                                {u.ativo ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {editandoUsuario?.id === u.id ? (
+                                  <>
+                                    <button className="btn btn-primary" style={{ fontSize: 11, padding: '4px 10px' }}
+                                      onClick={() => handleEditarUsuario(u.id, { nivel_permissao: editandoUsuario.nivel_permissao })}>
+                                      <Save size={12} /> Salvar
+                                    </button>
+                                    <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }}
+                                      onClick={() => setEditandoUsuario(null)}>
+                                      <X size={12} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button className="btn btn-ghost" title="Editar nível" style={{ fontSize: 11, padding: '4px 8px' }}
+                                      onClick={() => { setEditandoUsuario({ id: u.id, nivel_permissao: u.nivel_permissao }); setShowNovoUsuario(false); }}>
+                                      <Edit3 size={13} />
+                                    </button>
+                                    <button className="btn btn-ghost" title="Redefinir senha" style={{ fontSize: 11, padding: '4px 8px' }}
+                                      onClick={() => { setResetSenhaId(u.id); setNovaSenhaReset(''); }}>
+                                      <KeyRound size={13} />
+                                    </button>
+                                    {u.ativo && u.id !== user?.id && (
+                                      <button className="btn btn-ghost" title="Desativar usuário"
+                                        style={{ fontSize: 11, padding: '4px 8px', color: '#ef4444' }}
+                                        onClick={() => handleDesativarUsuario(u.id, u.nome)}>
+                                        <Trash2 size={13} />
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal reset de senha */}
+              {resetSenhaId && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                  <div className="card" style={{ padding: 28, maxWidth: 400, width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <h3 style={{ fontWeight: 700, fontSize: 15 }}>Redefinir Senha</h3>
+                      <button className="btn btn-ghost btn-icon" onClick={() => setResetSenhaId(null)}><X size={16} /></button>
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                      Defina uma nova senha para <strong>{usuariosList.find(u => u.id === resetSenhaId)?.nome}</strong>. A sessão ativa será encerrada.
+                    </p>
+                    <input className="input" type="password" placeholder="Nova senha (mín. 8 chars)" value={novaSenhaReset}
+                      onChange={e => setNovaSenhaReset(e.target.value)} style={{ marginBottom: 16 }} />
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost" onClick={() => setResetSenhaId(null)}>Cancelar</button>
+                      <button className="btn btn-primary" onClick={handleResetSenha}><KeyRound size={14} /> Redefinir</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ━━ Certificado Digital ━━ */}
           {activeTab === 'certificado' && (
             <div className="card animation-fade-in" style={{ padding: 28 }}>
@@ -627,7 +901,7 @@ export default function MyAccount() {
                     <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Pagamento</p>
                     <CreditCard size={16} color="var(--primary)" />
                   </div>
-                  {assinatura?.mp_subscription_id ? (
+                  {assinatura?.gateway_subscription_id || assinatura?.gateway_payment_id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
                       <div style={{ width: 32, height: 20, background: '#00aeef', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ fontSize: 7, fontWeight: 900, color: '#fff' }}>MP</span>

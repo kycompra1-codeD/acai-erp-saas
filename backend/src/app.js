@@ -48,12 +48,12 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Rate limit para login email/senha: máx 30 falhas / 15 min (sucessos não contam)
+// Rate limit para login email/senha: máx 50 falhas / 15 min (sucessos não contam)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 50,
   skipSuccessfulRequests: true,
-  message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos.' },
+  message: { sucesso: false, mensagem: 'Muitas tentativas de login. Aguarde 15 minutos ou use "Esqueci minha senha".' },
 });
 
 // Rate limit para Google OAuth: máx 60 por 15 min (sucessos não contam)

@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { query } = require('../db/connection');
+const { query, withTransaction } = require('../db/connection');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -128,20 +128,40 @@ router.post('/checkout', authMiddleware, [
     }
     const plano = planos[0];
 
-    // Buscar dados do tenant/usuário
+    // Buscar dados do tenant/usuário e desconto aplicado pelo admin
     const { rows: usuarios } = await query(
-      `SELECT u.nome, u.email, t.nome_empresa
+      `SELECT u.nome, u.email, t.nome_empresa, t.desconto_percentual, t.acesso_gratuito
        FROM usuarios u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1`,
       [usuario_id]
     );
     const user = usuarios[0];
 
-    const valor = periodo === 'anual'
+    // Acesso gratuito: ativar diretamente sem pagamento
+    if (user.acesso_gratuito) {
+      await withTransaction(async (client) => {
+        await client.query(
+          `INSERT INTO assinaturas (tenant_id, plano_id, status, periodo, valor, proximo_vencimento)
+           VALUES ($1, $2, 'ativa', $3, 0, NOW() + INTERVAL '1 year')
+           ON CONFLICT (tenant_id, gateway_subscription_id) DO NOTHING`,
+          [tenant_id, plano_id, periodo]
+        );
+        await client.query(
+          `UPDATE tenants SET status = 'ativo', plano_id = $1 WHERE id = $2`,
+          [plano_id, tenant_id]
+        );
+      });
+      return res.json({ sucesso: true, tipo: 'gratuito', mensagem: 'Plano ativado gratuitamente!' });
+    }
+
+    const desconto = parseFloat(user.desconto_percentual || 0);
+    const valorBase = periodo === 'anual'
       ? parseFloat(plano.valor_anual || plano.valor_mensal * 12 * 0.8)
       : parseFloat(plano.valor_mensal);
+    // Aplicar desconto do admin (ex: 99% = cliente paga 1%)
+    const valor = parseFloat((valorBase * (1 - desconto / 100)).toFixed(2));
 
-    const descricao = `Zullya ERP — Plano ${plano.nome} (${periodo})`;
+    const descricao = `Zullya ERP — Plano ${plano.nome} (${periodo})${desconto > 0 ? ` [${desconto}% desconto]` : ''}`;
 
     // ── PIX: cria pagamento direto ───────────────────────────
     if (metodo === 'pix') {
@@ -189,9 +209,9 @@ router.post('/checkout', authMiddleware, [
         external_reference: tenant_id,
         metadata: { tenant_id, plano_id, periodo },
         back_urls: {
-          success: `${APP_URL}/assinatura?pagamento=aprovado`,
-          failure: `${APP_URL}/assinatura?pagamento=falhou`,
-          pending: `${APP_URL}/assinatura?pagamento=pendente`,
+          success: `${APP_URL}/my-account?pagamento=aprovado`,
+          failure: `${APP_URL}/my-account?pagamento=falhou`,
+          pending: `${APP_URL}/my-account?pagamento=pendente`,
         },
         auto_return: 'approved',
         notification_url: `${process.env.BACKEND_URL || 'https://api.zullya.com.br'}/api/webhooks/mercadopago`,
