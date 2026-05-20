@@ -28,12 +28,14 @@ router.post('/auth/login', [
     );
 
     if (rows.length === 0 || !rows[0].ativo) {
+      console.error('❌ Admin login falhou: e-mail não encontrado ou inativo:', email);
       return res.status(401).json({ sucesso: false, mensagem: 'Credenciais inválidas.' });
     }
 
     const admin = rows[0];
     const senhaCorreta = await bcrypt.compare(senha, admin.senha_hash);
     if (!senhaCorreta) {
+      console.error('❌ Admin login falhou: senha incorreta para:', email);
       return res.status(401).json({ sucesso: false, mensagem: 'Credenciais inválidas.' });
     }
 
@@ -477,7 +479,7 @@ router.post('/planos', adminMiddleware, [
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
     `, [nome, descricao || null, valor_mensal, valor_anual || null, trial_dias,
-        max_usuarios, max_filiais, max_produtos, JSON.stringify(modulos), ativo, destaque]);
+      max_usuarios, max_filiais, max_produtos, JSON.stringify(modulos), ativo, destaque]);
 
     return res.status(201).json({ sucesso: true, dados: rows[0] });
   } catch (err) {

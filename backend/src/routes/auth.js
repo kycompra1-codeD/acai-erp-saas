@@ -99,7 +99,7 @@ router.post('/registro', [
       );
 
       // Enviar e-mail de boas-vindas (não bloqueia a resposta)
-      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => {});
+      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => { });
 
       // Buscar dados do plano para retornar na resposta
       const { rows: planoInfo } = await client.query(
@@ -442,17 +442,18 @@ router.post('/google', async (req, res) => {
       }
 
       if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
-        console.error('❌ Google audience mismatch:', payload.aud);
+        console.error('❌ Google audience mismatch:', { payload: payload.aud, env: process.env.GOOGLE_CLIENT_ID });
         return res.status(401).json({
           sucesso: false,
           mensagem: 'Erro de configuração Google. Contate o suporte.',
+          debug: process.env.NODE_ENV !== 'production' ? `AUD mismatch: ${payload.aud} vs ${process.env.GOOGLE_CLIENT_ID}` : undefined
         });
       }
 
       googleId = payload.sub;
-      email    = payload.email;
-      name     = payload.name;
-      picture  = payload.picture;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
     } catch (fetchErr) {
       // Fallback: tentar via SDK local (nova instância por request = sem cache stale)
       console.warn('⚠️  tokeninfo falhou, tentando SDK:', fetchErr.message);
@@ -463,9 +464,9 @@ router.post('/google', async (req, res) => {
       });
       const p = ticket.getPayload();
       googleId = p.sub;
-      email    = p.email;
-      name     = p.name;
-      picture  = p.picture;
+      email = p.email;
+      name = p.name;
+      picture = p.picture;
     }
 
     const googleUserSelect = `
@@ -612,7 +613,7 @@ router.post('/registro-google', [
       const refreshHash = await bcrypt.hash(refreshToken, 10);
       await client.query('UPDATE usuarios SET refresh_token_hash = $1 WHERE id = $2', [refreshHash, usuario_id]);
 
-      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => {});
+      enviarBoasVindas({ email, nome, nomeEmpresa: nome_empresa }).catch(() => { });
 
       return res.status(201).json({
         sucesso: true,
